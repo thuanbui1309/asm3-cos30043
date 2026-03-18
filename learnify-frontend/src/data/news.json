@@ -1,0 +1,128 @@
+[
+  {
+    "id": 1,
+    "date": "2026-03-15",
+    "title": "New Web Development Bootcamp Launched",
+    "content": "We are excited to announce a comprehensive web development bootcamp covering HTML, CSS, JavaScript, and Vue.js. Enroll now to kickstart your career in tech.",
+    "category": "Featured Courses"
+  },
+  {
+    "id": 2,
+    "date": "2026-03-14",
+    "title": "Platform Maintenance Scheduled for March 20",
+    "content": "Our platform will undergo scheduled maintenance on March 20 from 2:00 AM to 4:00 AM UTC. During this time, some features may be temporarily unavailable.",
+    "category": "Platform Updates"
+  },
+  {
+    "id": 3,
+    "date": "2026-03-13",
+    "title": "5 Tips for Effective Online Learning",
+    "content": "Online learning requires discipline and strategy. Here are five proven tips: set a dedicated study space, create a schedule, take regular breaks, engage with peers, and review materials weekly.",
+    "category": "Learning Tips"
+  },
+  {
+    "id": 4,
+    "date": "2026-03-12",
+    "title": "AI and Machine Learning Course Now Available",
+    "content": "Explore the fundamentals of artificial intelligence and machine learning with our newest course. Learn about neural networks, data preprocessing, and model evaluation.",
+    "category": "Featured Courses"
+  },
+  {
+    "id": 5,
+    "date": "2026-03-11",
+    "title": "Tech Industry Hiring Trends for 2026",
+    "content": "The tech industry continues to grow with increasing demand for cloud engineers, cybersecurity specialists, and full-stack developers. Stay ahead by upskilling in these areas.",
+    "category": "Industry News"
+  },
+  {
+    "id": 6,
+    "date": "2026-03-10",
+    "title": "How to Build a Portfolio That Stands Out",
+    "content": "A strong portfolio is key to landing your first tech job. Focus on real-world projects, clean code, and clear documentation to make a lasting impression on recruiters.",
+    "category": "Learning Tips"
+  },
+  {
+    "id": 7,
+    "date": "2026-03-09",
+    "title": "New Payment Options Now Available",
+    "content": "We have expanded our payment options to include bank transfers via QR code. This makes course purchases even more convenient for our users in Vietnam.",
+    "category": "Platform Updates"
+  },
+  {
+    "id": 8,
+    "date": "2026-03-08",
+    "title": "Data Science Fundamentals Course Updated",
+    "content": "Our popular Data Science Fundamentals course has been updated with new modules on pandas, matplotlib, and real-world dataset analysis projects.",
+    "category": "Featured Courses"
+  },
+  {
+    "id": 9,
+    "date": "2026-03-07",
+    "title": "Remote Work Revolution Continues in 2026",
+    "content": "More companies are adopting remote and hybrid work models. This shift creates opportunities for self-paced learners to gain skills while maintaining their current jobs.",
+    "category": "Industry News"
+  },
+  {
+    "id": 10,
+    "date": "2026-03-06",
+    "title": "The Importance of Version Control",
+    "content": "Git is an essential tool for every developer. Learn how branching, merging, and pull requests work in collaborative software development environments.",
+    "category": "Learning Tips"
+  },
+  {
+    "id": 11,
+    "date": "2026-03-05",
+    "title": "CourseHub Reaches 10,000 Users",
+    "content": "We are thrilled to announce that our platform has reached 10,000 registered users. Thank you for being part of our growing learning community!",
+    "category": "Platform Updates"
+  },
+  {
+    "id": 12,
+    "date": "2026-03-04",
+    "title": "Introduction to Cloud Computing Course",
+    "content": "Learn the basics of cloud computing including AWS, Azure, and Google Cloud Platform. This course covers deployment, scaling, and cost management strategies.",
+    "category": "Featured Courses"
+  },
+  {
+    "id": 13,
+    "date": "2026-03-03",
+    "title": "Cybersecurity Threats to Watch in 2026",
+    "content": "Ransomware, phishing, and supply chain attacks remain top threats. Organizations must invest in security training and robust incident response plans.",
+    "category": "Industry News"
+  },
+  {
+    "id": 14,
+    "date": "2026-03-02",
+    "title": "How to Stay Motivated While Learning Online",
+    "content": "Staying motivated can be challenging when studying alone. Set small goals, track your progress, celebrate milestones, and connect with other learners for support.",
+    "category": "Learning Tips"
+  },
+  {
+    "id": 15,
+    "date": "2026-03-01",
+    "title": "Mobile App Development with Flutter",
+    "content": "Flutter enables cross-platform mobile development with a single codebase. Our new course walks you through building beautiful, performant mobile applications from scratch.",
+    "category": "Featured Courses"
+  },
+  {
+    "id": 16,
+    "date": "2026-02-28",
+    "title": "Video Streaming Feature Now Live",
+    "content": "Course videos now stream with adaptive quality. Switch between 360p, 720p, and 1080p based on your connection speed for the best viewing experience.",
+    "category": "Platform Updates"
+  },
+  {
+    "id": 17,
+    "date": "2026-02-27",
+    "title": "Green Tech: Sustainable Computing Trends",
+    "content": "The tech industry is increasingly focused on sustainability. Energy-efficient data centers and carbon-neutral cloud services are becoming the new standard.",
+    "category": "Industry News"
+  },
+  {
+    "id": 18,
+    "date": "2026-02-26",
+    "title": "Mastering JavaScript Promises and Async/Await",
+    "content": "Asynchronous programming is crucial for modern web development. Learn the differences between callbacks, promises, and async/await patterns with practical examples.",
+    "category": "Learning Tips"
+  }
+]
