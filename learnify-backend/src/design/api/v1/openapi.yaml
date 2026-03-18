@@ -1,0 +1,575 @@
+openapi: 3.0.3
+info:
+  title: Learnify API
+  version: "1.0"
+  description: Online Course Platform API
+
+servers:
+  - url: https://asm3-cos30043.vercel.app
+    description: Production (Vercel)
+  - url: http://localhost:3000
+    description: Local dev
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [student, instructor] }
+        created_at: { type: string, format: date-time }
+
+    Course:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        instructor_id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        difficulty: { type: string, enum: [beginner, intermediate, advanced] }
+        price: { type: number }
+        thumbnail_url: { type: string }
+        instructor_name: { type: string }
+        like_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Lesson:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        course_id: { type: string, format: uuid }
+        title: { type: string }
+        video_url: { type: string }
+        duration: { type: integer }
+        order_index: { type: integer }
+
+    Enrollment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        course_id: { type: string, format: uuid }
+        progress: { type: object }
+        purchased_at: { type: string, format: date-time }
+        title: { type: string }
+        category: { type: string }
+        instructor_name: { type: string }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        course_id: { type: string, format: uuid }
+        amount: { type: number }
+        method: { type: string }
+        transaction_id: { type: string }
+        status: { type: string, enum: [pending, completed, failed] }
+        created_at: { type: string, format: date-time }
+
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error: { type: string }
+
+paths:
+  /api/health:
+    get:
+      tags: [Utility]
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: ok }
+
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 6 }
+                role: { type: string, enum: [student, instructor], default: student }
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      user: { $ref: "#/components/schemas/User" }
+        "400": { description: Missing/invalid fields }
+        "409": { description: Email already registered }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      user: { $ref: "#/components/schemas/User" }
+        "400": { description: Missing fields }
+        "401": { description: Invalid credentials }
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/User" }
+
+  /api/users/me:
+    put:
+      tags: [Auth]
+      summary: Update profile
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/User" }
+
+  /api/courses:
+    get:
+      tags: [Courses]
+      summary: List courses
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Search title, description, category
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: difficulty
+          in: query
+          schema: { type: string, enum: [beginner, intermediate, advanced] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: Course list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      courses:
+                        type: array
+                        items: { $ref: "#/components/schemas/Course" }
+                      pagination: { $ref: "#/components/schemas/Pagination" }
+
+    post:
+      tags: [Courses]
+      summary: Create course
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, category, difficulty]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                category: { type: string }
+                difficulty: { type: string, enum: [beginner, intermediate, advanced] }
+                price: { type: number, default: 0 }
+                thumbnail_url: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/Course" }
+        "403": { description: Not instructor }
+
+  /api/courses/{id}:
+    get:
+      tags: [Courses]
+      summary: Course detail with lessons
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Course detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    allOf:
+                      - $ref: "#/components/schemas/Course"
+                      - type: object
+                        properties:
+                          lessons:
+                            type: array
+                            items: { $ref: "#/components/schemas/Lesson" }
+                          user_liked: { type: boolean }
+        "404": { description: Not found }
+
+    put:
+      tags: [Courses]
+      summary: Update course
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                category: { type: string }
+                difficulty: { type: string }
+                price: { type: number }
+                thumbnail_url: { type: string }
+      responses:
+        "200": { description: Updated }
+        "403": { description: Not owner }
+        "404": { description: Not found }
+
+    delete:
+      tags: [Courses]
+      summary: Delete course
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Deleted }
+        "403": { description: Not owner }
+        "404": { description: Not found }
+
+  /api/courses/{id}/like:
+    post:
+      tags: [Courses]
+      summary: Toggle like
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      liked: { type: boolean }
+                      like_count: { type: integer }
+
+  /api/courses/{courseId}/lessons:
+    post:
+      tags: [Lessons]
+      summary: Add lesson to course
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                video_url: { type: string }
+                duration: { type: integer }
+                order_index: { type: integer }
+      responses:
+        "201": { description: Created }
+        "403": { description: Not course owner }
+
+  /api/lessons/{id}:
+    put:
+      tags: [Lessons]
+      summary: Update lesson
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                video_url: { type: string }
+                duration: { type: integer }
+                order_index: { type: integer }
+      responses:
+        "200": { description: Updated }
+        "403": { description: Not course owner }
+
+    delete:
+      tags: [Lessons]
+      summary: Delete lesson
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Deleted }
+        "403": { description: Not course owner }
+
+  /api/enrollments:
+    get:
+      tags: [Enrollments]
+      summary: My enrolled courses
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Enrollment list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Enrollment" }
+
+    post:
+      tags: [Enrollments]
+      summary: Enroll in course
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [course_id]
+              properties:
+                course_id: { type: string, format: uuid }
+                payment_id: { type: string, format: uuid }
+      responses:
+        "201": { description: Enrolled }
+        "400": { description: Payment not verified }
+        "409": { description: Already enrolled }
+
+  /api/enrollments/{id}/progress:
+    put:
+      tags: [Enrollments]
+      summary: Update watch progress
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                progress: { type: object }
+      responses:
+        "200": { description: Updated }
+        "403": { description: Not owner }
+
+  /api/payments/create:
+    post:
+      tags: [Payments]
+      summary: Create payment
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [course_id]
+              properties:
+                course_id: { type: string, format: uuid }
+                method: { type: string, default: sepay }
+      responses:
+        "201":
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      payment: { $ref: "#/components/schemas/Payment" }
+                      qr_info:
+                        type: object
+                        properties:
+                          amount: { type: number }
+                          transaction_id: { type: string }
+                          description: { type: string }
+
+  /api/payments/{id}/status:
+    get:
+      tags: [Payments]
+      summary: Check payment status
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Payment status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/Payment" }
+
+  /api/payments/webhook:
+    post:
+      tags: [Payments]
+      summary: SePay webhook callback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transaction_id, status, api_key]
+              properties:
+                transaction_id: { type: string }
+                status: { type: string }
+                api_key: { type: string }
+      responses:
+        "200": { description: Processed }
+        "401": { description: Invalid API key }

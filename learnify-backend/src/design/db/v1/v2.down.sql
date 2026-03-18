@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS likes CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS enrollments CASCADE;
+DROP TABLE IF EXISTS lessons CASCADE;
+DROP TABLE IF EXISTS courses CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+UPDATE database_migrations
+SET status = 'rolled_back', applied_at = CURRENT_TIMESTAMP
+WHERE version = 'v1';

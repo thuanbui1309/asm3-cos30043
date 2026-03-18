@@ -1,13 +1,19 @@
-const { sql } = require('@vercel/postgres');
+const postgres = require('postgres');
 
-async function query(strings, ...values) {
-  try {
-    const result = await sql(strings, ...values);
-    return result;
-  } catch (error) {
-    console.error('Database query error:', error.message);
-    throw error;
-  }
-}
+const connection = postgres(process.env.DATABASE_URL, {
+  ssl: 'require',
+});
 
-module.exports = { sql, query };
+const handler = {
+  apply(target, thisArg, args) {
+    const promise = target.apply(thisArg, args);
+    return promise.then(rows => {
+      rows.rows = rows;
+      return rows;
+    });
+  },
+};
+
+const sql = new Proxy(connection, handler);
+
+module.exports = { sql };
