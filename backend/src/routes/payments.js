@@ -97,8 +97,26 @@ router.get('/:id/status', authenticate, async (req, res, next) => {
   }
 });
 
+router.get('/webhook-logs', authenticate, async (req, res) => {
+  if (req.user.role !== 'instructor') return res.status(403).end();
+  const logs = await sql`SELECT * FROM webhook_logs ORDER BY created_at DESC LIMIT 20`;
+  res.json({ success: true, data: logs });
+});
+
 router.post('/webhook', async (req, res, next) => {
   try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS webhook_logs (
+        id SERIAL PRIMARY KEY,
+        headers JSONB,
+        body JSONB,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await sql`
+      INSERT INTO webhook_logs (headers, body)
+      VALUES (${JSON.stringify(req.headers)}::jsonb, ${JSON.stringify(req.body)}::jsonb)
+    `;
     const authHeader = req.headers['authorization'];
     const apiKey = (authHeader && authHeader.startsWith('Bearer ')
       ? authHeader.split(' ')[1]
