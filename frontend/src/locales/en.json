@@ -245,7 +245,6 @@
     "title": "Payment",
     "amount": "Amount",
     "scanQr": "Scan the QR code to pay via bank transfer",
-    "transferContent": "Transfer description",
     "waiting": "Waiting for payment confirmation...",
     "generateQr": "Generate QR Code",
     "successTitle": "Payment Successful",

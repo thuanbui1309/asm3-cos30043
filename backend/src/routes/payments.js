@@ -41,7 +41,7 @@ router.post('/create', authenticate, async (req, res, next) => {
     }
 
     const id = uuidv4();
-    const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const transactionId = `SEVQR TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const amount = course[0].price;
 
     const result = await sql`
@@ -100,11 +100,11 @@ router.get('/:id/status', authenticate, async (req, res, next) => {
 router.post('/webhook', async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
-    const apiKey = authHeader && authHeader.startsWith('Bearer ')
+    const apiKey = (authHeader && authHeader.startsWith('Bearer ')
       ? authHeader.split(' ')[1]
-      : null;
+      : null) || req.body.api_key;
 
-    if (apiKey !== process.env.SEPAY_API_KEY) {
+    if (!apiKey || apiKey !== process.env.SEPAY_API_KEY) {
       return res.status(401).json({ success: false, error: 'Invalid API key' });
     }
 
@@ -117,7 +117,7 @@ router.post('/webhook', async (req, res, next) => {
     if (!match) {
       return res.json({ success: true, data: { message: 'Ignored: no transaction ID' } });
     }
-    const transactionId = `TXN-${match[1]}-${match[2]}`;
+    const transactionId = `SEVQR TXN-${match[1]}-${match[2]}`;
 
     const payment = await sql`
       SELECT * FROM payments WHERE transaction_id = ${transactionId} AND status = 'pending'

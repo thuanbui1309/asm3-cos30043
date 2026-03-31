@@ -49,10 +49,6 @@
               <div v-if="qrLoadFailed" class="alert alert-warning py-2 mt-2" style="font-size: 0.85rem;">
                 {{ $t('payment.qrLoadFailed') }}
               </div>
-              <div class="transfer-info mt-3">
-                <span class="transfer-label">{{ $t('payment.transferContent') }}:</span>
-                <code class="transfer-code">{{ transferContent }}</code>
-              </div>
             </div>
 
             <div v-else-if="showNoQrWarning" class="alert alert-warning py-2 mb-4" style="font-size: 0.85rem;">
@@ -96,7 +92,6 @@ export default {
       paymentStatus: null,
       qrUrl: null,
       qrLoadFailed: false,
-      transferContent: null,
       showNoQrWarning: false,
       pollInterval: null,
     }
@@ -126,7 +121,6 @@ export default {
         this.paymentId = data.data.payment.id
         const rawQr = data.data.qr_url
         this.qrUrl = rawQr ? `${api.defaults.baseURL}/payments/qr-proxy?url=${encodeURIComponent(rawQr)}` : null
-        this.transferContent = data.data.transfer_content
         if (this.qrUrl) {
           this.startPolling()
         } else {
@@ -200,32 +194,17 @@ export default {
     color: var(--color-primary);
   }
 
+  .qr-section {
+    background-color: var(--color-bg-light);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
   .qr-image {
     max-width: 240px;
-    border: 1px solid var(--color-border);
     border-radius: 8px;
-  }
-
-  .transfer-info {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-  }
-
-  .transfer-label {
-    color: var(--color-text-light);
-  }
-
-  .transfer-code {
-    background-color: var(--color-bg-light);
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    border: 1px solid var(--color-border);
-    color: var(--color-text);
-    user-select: all;
   }
 
   .success-icon {

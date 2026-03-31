@@ -245,7 +245,6 @@
     "title": "Thanh Toán",
     "amount": "Số tiền",
     "scanQr": "Quét mã QR để thanh toán qua chuyển khoản ngân hàng",
-    "transferContent": "Nội dung chuyển khoản",
     "waiting": "Đang chờ xác nhận thanh toán...",
     "generateQr": "Tạo mã QR",
     "successTitle": "Thanh Toán Thành Công",
