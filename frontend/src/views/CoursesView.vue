@@ -32,10 +32,6 @@
             <option value="intermediate">{{ $t('courses.intermediate') }}</option>
             <option value="advanced">{{ $t('courses.advanced') }}</option>
           </select>
-          <select v-model="instructorFilter" class="filter-select" aria-label="Filter by instructor">
-            <option value="">{{ $t('courses.allInstructors') }}</option>
-            <option v-for="name in instructorOptions" :key="name" :value="name">{{ name }}</option>
-          </select>
           <select v-model="priceFilter" class="filter-select" aria-label="Filter by price">
             <option value="">{{ $t('courses.anyPrice') }}</option>
             <option value="free">{{ $t('courses.free') }}</option>
@@ -69,21 +65,13 @@
 
       <div class="results-meta mb-3">
         <span v-if="!loading" class="results-count">
-          {{ $t('courses.showingRange', { from: rangeStart, to: rangeEnd, total: filteredCourses.length }) }}
+          {{ $t('courses.showingRange', { from: Math.min(1, filteredCourses.length), to: visibleCourses.length, total: filteredCourses.length }) }}
         </span>
-        <div class="results-right">
-          <button
-            v-if="search || categoryFilter || difficultyFilter || instructorFilter || priceFilter || ownershipFilter !== 'all'"
-            class="btn-clear"
-            @click="search = ''; categoryFilter = ''; difficultyFilter = ''; instructorFilter = ''; priceFilter = ''; ownershipFilter = 'all'"
-          >{{ $t('courses.clearFilters') }}</button>
-          <select v-model.number="perPage" class="per-page-select" aria-label="Courses per page" @change="currentPage = 1">
-            <option :value="6">6 / page</option>
-            <option :value="9">9 / page</option>
-            <option :value="12">12 / page</option>
-            <option :value="24">24 / page</option>
-          </select>
-        </div>
+        <button
+          v-if="search || categoryFilter || difficultyFilter || priceFilter || ownershipFilter !== 'all'"
+          class="btn-clear"
+          @click="search = ''; categoryFilter = ''; difficultyFilter = ''; priceFilter = ''; ownershipFilter = 'all'"
+        >{{ $t('courses.clearFilters') }}</button>
       </div>
 
       <div v-if="loading" class="text-center py-5">
@@ -93,13 +81,13 @@
       </div>
 
       <div v-else-if="filteredCourses.length === 0" class="empty-state">
-        <p class="text-muted mb-0">{{ ownershipFilter !== 'all' || search || categoryFilter || difficultyFilter || instructorFilter || priceFilter ? $t('courses.noFilterMatch') : $t('courses.noResults') }}</p>
+        <p class="text-muted mb-0">{{ ownershipFilter !== 'all' || search || categoryFilter || difficultyFilter || priceFilter ? $t('courses.noFilterMatch') : $t('courses.noResults') }}</p>
       </div>
 
       <template v-else>
         <div class="row g-4">
           <div
-            v-for="course in paginatedCourses"
+            v-for="course in visibleCourses"
             :key="course.id"
             class="col-12 col-sm-6 col-lg-4"
           >
@@ -127,23 +115,21 @@
           </div>
         </div>
 
-        <PaginationBar
-          :current-page="currentPage"
-          :total-pages="totalPages"
-          @page-change="currentPage = $event"
-        />
+        <div v-if="visibleCount < filteredCourses.length" class="text-center mt-4">
+          <button class="btn-load-more" @click="visibleCount += 10">
+            {{ $t('courses.loadMore') }}
+          </button>
+        </div>
       </template>
   </div>
 </template>
 
 <script>
 import api from '@/services/api'
-import PaginationBar from '@/components/common/PaginationBar.vue'
 import { useAuthStore } from '@/stores/auth'
 
 export default {
   name: 'CoursesView',
-  components: { PaginationBar },
   data() {
     return {
       courses: [],
@@ -152,11 +138,9 @@ export default {
       search: '',
       categoryFilter: '',
       difficultyFilter: '',
-      instructorFilter: '',
       priceFilter: '',
       ownershipFilter: 'all',
-      currentPage: 1,
-      perPage: 9,
+      visibleCount: 15,
       categories: ['web-dev', 'data-science', 'mobile-dev', 'design', 'devops', 'other'],
       defaultThumbnail: 'https://placehold.co/400x225/e8e8e8/999?text=Course',
     }
@@ -165,10 +149,6 @@ export default {
     isAuthenticated() { return useAuthStore().isAuthenticated },
     isInstructor() { return useAuthStore().isInstructor },
     isStudent() { return useAuthStore().isStudent },
-    instructorOptions() {
-      const names = [...new Set(this.courses.map((c) => c.instructor_name).filter(Boolean))]
-      return names.sort()
-    },
     filteredCourses() {
       let result = this.courses
       if (this.search) {
@@ -185,9 +165,6 @@ export default {
       if (this.difficultyFilter) {
         result = result.filter((c) => c.difficulty === this.difficultyFilter)
       }
-      if (this.instructorFilter) {
-        result = result.filter((c) => c.instructor_name === this.instructorFilter)
-      }
       if (this.priceFilter === 'free') {
         result = result.filter((c) => Number(c.price) === 0)
       } else if (this.priceFilter === 'paid') {
@@ -201,28 +178,16 @@ export default {
       }
       return result
     },
-    totalPages() {
-      return Math.max(1, Math.ceil(this.filteredCourses.length / this.perPage))
-    },
-    paginatedCourses() {
-      const start = (this.currentPage - 1) * this.perPage
-      return this.filteredCourses.slice(start, start + this.perPage)
-    },
-    rangeStart() {
-      if (this.filteredCourses.length === 0) return 0
-      return (this.currentPage - 1) * this.perPage + 1
-    },
-    rangeEnd() {
-      return Math.min(this.currentPage * this.perPage, this.filteredCourses.length)
+    visibleCourses() {
+      return this.filteredCourses.slice(0, this.visibleCount)
     },
   },
   watch: {
-    search() { this.currentPage = 1 },
-    categoryFilter() { this.currentPage = 1 },
-    difficultyFilter() { this.currentPage = 1 },
-    instructorFilter() { this.currentPage = 1 },
-    priceFilter() { this.currentPage = 1 },
-    ownershipFilter() { this.currentPage = 1 },
+    search() { this.visibleCount = 15 },
+    categoryFilter() { this.visibleCount = 15 },
+    difficultyFilter() { this.visibleCount = 15 },
+    priceFilter() { this.visibleCount = 15 },
+    ownershipFilter() { this.visibleCount = 15 },
   },
   async created() {
     await this.fetchCourses()
@@ -234,7 +199,7 @@ export default {
     async fetchCourses() {
       this.loading = true
       try {
-        const { data } = await api.get('/courses')
+        const { data } = await api.get('/courses?limit=1000')
         this.courses = data.data.courses || []
       } catch {
         this.courses = []
@@ -295,6 +260,11 @@ export default {
     gap: 0.75rem;
     align-items: center;
     flex-wrap: wrap;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.25rem;
   }
 
   .toolbar-left {
@@ -324,8 +294,9 @@ export default {
   .search-input {
     width: 100%;
     padding: 0.55rem 0.85rem 0.55rem 2.4rem;
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border);
     border-radius: 8px;
+    box-shadow: var(--shadow-sm);
     font-size: 0.9rem;
     background-color: var(--color-bg);
     color: var(--color-text);
@@ -339,8 +310,9 @@ export default {
 
   .filter-select {
     padding: 0.55rem 2rem 0.55rem 0.85rem;
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border);
     border-radius: 8px;
+    box-shadow: var(--shadow-sm);
     font-size: 0.9rem;
     background-color: var(--color-bg);
     color: var(--color-text);
@@ -384,14 +356,21 @@ export default {
     text-decoration: underline;
   }
 
-  .per-page-select {
-    padding: 0.3rem 0.6rem;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    font-size: 0.82rem;
-    background-color: var(--color-bg);
-    color: var(--color-text);
+  .btn-load-more {
+    padding: 0.55rem 2rem;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 8px;
+    background: var(--color-bg);
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
     cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .btn-load-more:hover {
+    background-color: var(--color-primary);
+    color: #fff;
   }
 
   .empty-state {
@@ -403,6 +382,7 @@ export default {
     background-color: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: 12px;
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
     height: 100%;
     cursor: pointer;
@@ -413,7 +393,7 @@ export default {
 
   .course-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
   }
 
   .course-thumbnail {
@@ -489,6 +469,7 @@ export default {
   .course-instructor {
     font-size: 0.82rem;
     color: var(--color-text-light);
+    text-decoration: none;
     margin-bottom: 0;
     flex: 1;
   }

@@ -1,7 +1,7 @@
 <template>
   <div class="container py-5">
     <button class="btn-back mb-4" @click="$router.back()">
-      &larr; Back
+      &larr; {{ $t('common.back') }}
     </button>
 
     <div v-if="loading" class="text-center py-5">
@@ -88,7 +88,7 @@
                 {{ $t('courses.enroll') }}
               </button>
               <router-link v-else-if="!isAuthenticated" to="/login" class="btn btn-primary btn-lg">
-                {{ $t('auth.login') }} to {{ $t('courses.enroll') }}
+                {{ $t('courses.loginToEnroll') }}
               </router-link>
 
               <button
@@ -188,9 +188,10 @@ export default {
 
 <style scoped>
   .btn-back {
-    background: none;
-    border: none;
-    padding: 0;
+    padding: 0.4rem 1rem;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 8px;
+    background: var(--color-bg);
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--color-primary);
@@ -198,10 +199,12 @@ export default {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
+    transition: background-color 0.15s, color 0.15s;
   }
 
   .btn-back:hover {
-    text-decoration: underline;
+    background-color: var(--color-primary);
+    color: #fff;
   }
 
   .course-category {
@@ -235,7 +238,8 @@ export default {
     padding: 0.3rem 0.8rem;
     border-radius: 6px;
     background-color: var(--color-bg-light);
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
     text-transform: capitalize;
   }
 
@@ -250,6 +254,7 @@ export default {
     padding: 0.85rem 1rem;
     border: 1px solid var(--color-border);
     border-radius: 8px;
+    box-shadow: var(--shadow-sm);
     margin-bottom: 0.5rem;
     background-color: var(--color-bg);
   }
@@ -281,6 +286,7 @@ export default {
     background-color: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: 12px;
+    box-shadow: var(--shadow-sm);
     padding: 1.5rem;
   }
 

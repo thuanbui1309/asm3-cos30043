@@ -25,6 +25,7 @@ export default {
     border: 1px solid var(--color-border);
     border-radius: 8px;
     background-color: var(--color-bg);
+    box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
   }
 

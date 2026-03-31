@@ -172,9 +172,7 @@
     </section>
 
     <section class="cta-section">
-      <img :src="ctaBg" alt="" class="cta-bg-img" aria-hidden="true" />
-      <div class="cta-overlay"></div>
-      <div class="container text-center position-relative" style="z-index: 1;">
+      <div class="container text-center">
         <h2 class="text-white mb-3">{{ $t('home.getStarted') }}</h2>
         <p class="cta-desc mb-4">
           {{ $t('home.getStartedDesc') }}
@@ -194,7 +192,6 @@ import flexibleImg from '@/assets/images/flexible.jpg'
 import certificateImg from '@/assets/images/certificate.jpg'
 import communityImg from '@/assets/images/community.jpg'
 import studyImg from '@/assets/images/study.jpg'
-import ctaBg from '@/assets/images/cta-bg.jpg'
 
 export default {
   name: 'HomeView',
@@ -206,7 +203,6 @@ export default {
       certificateImg,
       communityImg,
       studyImg,
-      ctaBg,
     }
   },
 }
@@ -280,6 +276,7 @@ export default {
     background-color: var(--color-bg);
     border-radius: 8px;
     border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
     height: 100%;
     display: flex;
@@ -330,6 +327,7 @@ export default {
     background-color: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: 12px;
+    box-shadow: var(--shadow-sm);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
@@ -510,26 +508,10 @@ export default {
   }
 
   .cta-section {
-    position: relative;
-    height: 400px;
     display: flex;
     align-items: center;
-    overflow: hidden;
-  }
-
-  .cta-bg-img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-  }
-
-  .cta-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.72);
+    padding: 5rem 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   }
 
   .cta-desc {
@@ -552,7 +534,7 @@ export default {
     }
 
     .cta-section {
-      height: 300px;
+      padding: 3.5rem 0;
     }
   }
 </style>

@@ -87,14 +87,14 @@
             :class="{ active: currentLocale === 'en' }"
             @click="setLocale('en')"
           >
-            English
+            {{ $t('settings.english') }}
           </button>
           <button
             class="lang-option"
             :class="{ active: currentLocale === 'vi' }"
             @click="setLocale('vi')"
           >
-            Tieng Viet
+            {{ $t('settings.vietnamese') }}
           </button>
         </div>
       </div>

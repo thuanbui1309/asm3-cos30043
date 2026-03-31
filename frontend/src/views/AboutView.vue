@@ -125,6 +125,7 @@ export default {
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: 12px;
+    box-shadow: var(--shadow-sm);
     padding: 1.75rem 1.5rem;
     height: 100%;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -168,6 +169,7 @@ export default {
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: 12px;
+    box-shadow: var(--shadow-sm);
     padding: 2rem;
     border-left: 4px solid var(--color-primary);
   }

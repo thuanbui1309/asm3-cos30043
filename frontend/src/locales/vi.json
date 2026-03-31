@@ -25,7 +25,7 @@
     "expertInstructors": "Giảng Viên Chuyên Gia",
     "expertInstructorsDesc": "Học từ những chuyên gia hàng đầu trong ngành với nhiều năm kinh nghiệm thực tế.",
     "flexibleLearning": "Học Linh Hoạt",
-    "flexibleLearningDesc": "Học mọi lúc, mọi nơi với video chất lượng cao và theo dõi tiến độ học tập.",
+    "flexibleLearningDesc": "Học mọi lúc, mọi nơi qua video chất lượng cao và dễ dàng theo dõi tiến độ học tập.",
     "certificate": "Chứng Chỉ Hoàn Thành",
     "certificateDesc": "Nhận chứng chỉ sau khi hoàn thành khóa học để nâng cao hồ sơ của bạn.",
     "community": "Cộng Đồng Sôi Nổi",
@@ -73,7 +73,7 @@
     "yourName": "Tên của bạn",
     "namePlaceholder": "Nhập tên của bạn",
     "welcome": "Xin chào",
-    "welcomeDesc": "Chúng tôi rất vui khi bạn đến đây. Hãy khám phá các khóa học phù hợp với mục tiêu của bạn.",
+    "welcomeDesc": "Chào mừng bạn đến với Learnify. Hãy khám phá các khóa học phù hợp với mục tiêu của bạn.",
     "interestLabel": "Bạn muốn học gì?",
     "exploreCourses": "Khám Phá Khóa Học",
     "values": {
@@ -124,7 +124,8 @@
     "next": "Tiếp",
     "page": "Trang",
     "cancel": "Hủy",
-    "delete": "Xóa"
+    "delete": "Xóa",
+    "back": "Quay lại"
   },
   "myCourses": {
     "totalCourses": "Tổng khóa học",
@@ -135,7 +136,7 @@
     "notStarted": "Chưa bắt đầu",
     "inProgress": "Đang học",
     "completed": "Đã hoàn thành",
-    "deleteWarning": "Điều này sẽ xóa vĩnh viễn khóa học, tất cả bài học và lịch sử đăng ký."
+    "deleteWarning": "Hành động này sẽ xóa vĩnh viễn khóa học, toàn bộ bài học và lịch sử đăng ký."
   },
   "profile": {
     "title": "Hồ Sơ Của Tôi",
@@ -159,14 +160,14 @@
     "advanced": "Nâng cao",
     "noResults": "Không tìm thấy khóa học.",
     "noFilterMatch": "Không có khóa học nào phù hợp với bộ lọc.",
-    "showingRange": "Hiển thị {from}–{to} trong {total} khóa học",
+    "showingRange": "Hiển thị từ {from} đến {to} trên tổng số {total} khóa học",
     "allCourses": "Tất cả khóa học",
     "createdByMe": "Do tôi tạo",
     "enrolledFilter": "Đã đăng ký",
-    "allInstructors": "Tất cả giảng viên",
     "anyPrice": "Mọi mức giá",
     "paid": "Có phí",
     "clearFilters": "Xóa bộ lọc",
+    "loadMore": "Xem thêm",
     "allCategories": "Tất cả danh mục",
     "allLevels": "Tất cả cấp độ",
     "view": "Xem",
@@ -179,10 +180,11 @@
     "deleteThisCourse": "Xóa khóa học này",
     "deleteWarning": "Hành động này không thể hoàn tác. Tất cả bài học và đăng ký sẽ bị xóa.",
     "priceLocked": "Không thể thay đổi giá sau khi đã có học viên đăng ký.",
-    "byInstructor": "bởi",
+    "byInstructor": "Giảng viên:",
     "free": "Miễn phí",
     "enroll": "Đăng Ký Ngay",
     "enrolled": "Tiếp Tục Học",
+    "loginToEnroll": "Đăng Nhập để Đăng Ký Ngay",
     "like": "Thích",
     "liked": "Đã thích",
     "lessons": "Bài Học",

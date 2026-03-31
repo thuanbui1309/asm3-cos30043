@@ -60,24 +60,52 @@ const COURSES = [
   { title: 'Open Source Contribution Guide',   category: 'other',        difficulty: 'intermediate', price: 3000 },
 ]
 
-const CATEGORY_COLORS = {
-  'web-dev':      '6366f1',
-  'data-science': '10b981',
-  'devops':       'f59e0b',
-  'design':       'ec4899',
-  'mobile-dev':   '3b82f6',
-  'other':        '64748b',
-}
+const COURSE_THUMBNAILS = [
+  'https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1621839673705-6617adf9e890?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1579468118864-1b9ea3c0db4a?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1619410283995-43d9134e7656?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1655720828018-edd2daec9349?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1543286386-713bdd548da4?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1617040619263-41c5a9ca7521?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1616469829581-73993eb86b02?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1592478411213-6153e4ebc07d?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1609921212029-bb5a28e60960?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1618004912476-29818d81ae2e?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1667372393086-9d4001d51cf1?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=1280&h=720&fit=crop',
+  'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1280&h=720&fit=crop',
+]
 
 const DEMO_VIDEO = 'https://www.w3schools.com/html/mov_bbb.mp4'
 const NUM_STUDENTS = 210
 const INSTRUCTOR_USERNAMES = INSTRUCTORS.map((i) => i.username)
-
-function thumbnailUrl(title, category) {
-  const color = CATEGORY_COLORS[category] || '64748b'
-  const text = encodeURIComponent(title.substring(0, 30))
-  return `https://placehold.co/1280x720/${color}/white?text=${text}`
-}
 
 function pickRandom(arr, count) {
   const shuffled = [...arr].sort(() => Math.random() - 0.5)
@@ -125,7 +153,7 @@ async function seed() {
     category: c.category,
     difficulty: c.difficulty,
     price: c.price,
-    thumbnail_url: thumbnailUrl(c.title, c.category),
+    thumbnail_url: COURSE_THUMBNAILS[i],
   }))
   const courseRows = await sql`
     INSERT INTO courses ${sql(courseData, 'instructor_id', 'title', 'description', 'category', 'difficulty', 'price', 'thumbnail_url')}

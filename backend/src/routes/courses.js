@@ -10,130 +10,29 @@ router.get('/', optionalAuth, async (req, res, next) => {
     const { q, category, difficulty, page = 1, limit = 10 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const lim = parseInt(limit);
+    const search = q ? `%${q}%` : null;
+    const cat = category || null;
+    const diff = difficulty || null;
 
-    let courses;
-    let countResult;
+    const courses = await sql`
+      SELECT c.*, u.username AS instructor_name,
+        (SELECT COUNT(*) FROM likes WHERE course_id = c.id)::int AS like_count,
+        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
+      FROM courses c
+      JOIN users u ON c.instructor_id = u.id
+      WHERE (${search}::text IS NULL OR c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
+        AND (${cat}::text IS NULL OR c.category = ${cat})
+        AND (${diff}::text IS NULL OR c.difficulty = ${diff})
+      ORDER BY c.created_at DESC
+      LIMIT ${lim} OFFSET ${offset}
+    `;
 
-    if (q && category && difficulty) {
-      const search = `%${q}%`;
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        WHERE (c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
-          AND c.category = ${category}
-          AND c.difficulty = ${difficulty}
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`
-        SELECT COUNT(*) FROM courses c
-        WHERE (c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
-          AND c.category = ${category}
-          AND c.difficulty = ${difficulty}
-      `;
-    } else if (q && category) {
-      const search = `%${q}%`;
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        WHERE (c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
-          AND c.category = ${category}
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`
-        SELECT COUNT(*) FROM courses c
-        WHERE (c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
-          AND c.category = ${category}
-      `;
-    } else if (q && difficulty) {
-      const search = `%${q}%`;
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        WHERE (c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
-          AND c.difficulty = ${difficulty}
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`
-        SELECT COUNT(*) FROM courses c
-        WHERE (c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
-          AND c.difficulty = ${difficulty}
-      `;
-    } else if (category && difficulty) {
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        WHERE c.category = ${category} AND c.difficulty = ${difficulty}
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`
-        SELECT COUNT(*) FROM courses c
-        WHERE c.category = ${category} AND c.difficulty = ${difficulty}
-      `;
-    } else if (q) {
-      const search = `%${q}%`;
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        WHERE c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search}
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`
-        SELECT COUNT(*) FROM courses c
-        WHERE c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search}
-      `;
-    } else if (category) {
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        WHERE c.category = ${category}
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`
-        SELECT COUNT(*) FROM courses c WHERE c.category = ${category}
-      `;
-    } else if (difficulty) {
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        WHERE c.difficulty = ${difficulty}
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`
-        SELECT COUNT(*) FROM courses c WHERE c.difficulty = ${difficulty}
-      `;
-    } else {
-      courses = await sql`
-        SELECT c.*, u.username AS instructor_name,
-          (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count
-        FROM courses c
-        JOIN users u ON c.instructor_id = u.id
-        ORDER BY c.created_at DESC
-        LIMIT ${lim} OFFSET ${offset}
-      `;
-      countResult = await sql`SELECT COUNT(*) FROM courses`;
-    }
-
+    const countResult = await sql`
+      SELECT COUNT(*) FROM courses c
+      WHERE (${search}::text IS NULL OR c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
+        AND (${cat}::text IS NULL OR c.category = ${cat})
+        AND (${diff}::text IS NULL OR c.difficulty = ${diff})
+    `;
     const total = parseInt(countResult[0].count);
 
     res.json({
