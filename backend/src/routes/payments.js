@@ -117,10 +117,8 @@ router.post('/webhook', async (req, res, next) => {
       INSERT INTO webhook_logs (headers, body)
       VALUES (${JSON.stringify(req.headers)}::jsonb, ${JSON.stringify(req.body)}::jsonb)
     `;
-    const authHeader = req.headers['authorization'];
-    const apiKey = (authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.split(' ')[1]
-      : null) || req.body.api_key;
+    const authHeader = req.headers['authorization'] || '';
+    const apiKey = authHeader.replace(/^(Bearer|Apikey)\s+/i, '') || req.body.api_key;
 
     if (!apiKey || apiKey !== process.env.SEPAY_API_KEY) {
       return res.status(401).json({ success: false, error: 'Invalid API key' });
@@ -131,7 +129,7 @@ router.post('/webhook', async (req, res, next) => {
     }
 
     const content = req.body.content || '';
-    const match = content.match(/TXN[\s\-]?(\d{13,})[\s\-]?([A-Za-z0-9]{4,})/);
+    const match = content.match(/TXN[\s\-]?(\d{13,})[\s\-]?([a-z0-9]{4,})/i);
     if (!match) {
       return res.json({ success: true, data: { message: 'Ignored: no transaction ID' } });
     }
