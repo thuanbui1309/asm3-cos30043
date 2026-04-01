@@ -32,8 +32,13 @@
 
         <div class="tab-content">
           <div v-if="activeTab === 'about'" class="tab-pane">
-            <p v-if="currentLesson?.description">{{ currentLesson.description }}</p>
-            <p v-else class="text-muted">{{ $t('courses.noResults') }}</p>
+            <div v-if="currentLesson?.description">
+              <p>{{ currentLesson.description }}</p>
+            </div>
+            <div v-else>
+              <h5>{{ course?.title }}</h5>
+              <p v-if="course?.description" class="text-muted">{{ course.description }}</p>
+            </div>
           </div>
           <div v-if="activeTab === 'notes'" class="tab-pane">
             <LessonNotes
@@ -169,11 +174,13 @@ export default {
 <style scoped>
   .learn-layout {
     display: flex;
-    min-height: calc(100vh - 70px);
+    height: calc(100vh - 56px);
+    overflow: hidden;
   }
 
   .learn-main {
     flex: 1;
+    overflow-y: auto;
     padding: 0;
   }
 
