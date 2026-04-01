@@ -345,7 +345,11 @@ export default {
     progressPercent(item) {
       const lessonIds = Array.isArray(item.lesson_ids) ? item.lesson_ids : []
       if (lessonIds.length === 0) return 0
-      const progress = (item.progress && typeof item.progress === 'object') ? item.progress : {}
+      let p = item.progress
+      if (typeof p === 'string') {
+        try { p = JSON.parse(p) } catch { p = {} }
+      }
+      const progress = (p && typeof p === 'object') ? p : {}
       const done = lessonIds.filter((id) => progress[id]).length
       return Math.round((done / lessonIds.length) * 100)
     },

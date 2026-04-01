@@ -30,8 +30,8 @@
           </button>
         </div>
 
-        <div class="tab-content">
-          <div v-if="activeTab === 'about'" class="tab-pane">
+        <div class="learn-tab-content">
+          <div v-if="activeTab === 'about'" class="learn-tab-pane">
             <div v-if="currentLesson?.description">
               <p>{{ currentLesson.description }}</p>
             </div>
@@ -40,7 +40,7 @@
               <p v-if="course?.description" class="text-muted">{{ course.description }}</p>
             </div>
           </div>
-          <div v-if="activeTab === 'notes'" class="tab-pane">
+          <div v-if="activeTab === 'notes'" class="learn-tab-pane">
             <LessonNotes
               v-if="currentLesson"
               :lesson-id="currentLesson.id"
@@ -48,7 +48,7 @@
               @seek="seekVideo"
             />
           </div>
-          <div v-if="activeTab === 'discussion'" class="tab-pane">
+          <div v-if="activeTab === 'discussion'" class="learn-tab-pane">
             <CommentSection
               v-if="currentLesson"
               :lesson-id="currentLesson.id"
@@ -130,9 +130,11 @@ export default {
       const enrollment = (enrollResp.data.data || []).find((e) => e.course_id === courseId)
       if (enrollment) {
         this.enrollmentId = enrollment.id
-        this.progress = (enrollment.progress && typeof enrollment.progress === 'object')
-          ? enrollment.progress
-          : {}
+        let p = enrollment.progress
+        if (typeof p === 'string') {
+          try { p = JSON.parse(p) } catch { p = {} }
+        }
+        this.progress = (p && typeof p === 'object') ? p : {}
       }
     } catch {
       this.$router.push('/courses')
@@ -174,13 +176,12 @@ export default {
 <style scoped>
   .learn-layout {
     display: flex;
-    height: calc(100vh - 56px);
-    overflow: hidden;
+    min-height: calc(100vh - 56px);
   }
 
   .learn-main {
     flex: 1;
-    overflow-y: auto;
+    min-width: 0;
     padding: 0;
   }
 
@@ -217,7 +218,7 @@ export default {
     border-bottom-color: var(--color-primary);
   }
 
-  .tab-content {
+  .learn-tab-content {
     padding: 1.5rem;
   }
 
