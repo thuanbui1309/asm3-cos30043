@@ -64,6 +64,61 @@
       </div>
     </section>
 
+    <section v-if="recentlyViewed.length > 0" class="py-5">
+      <div class="container">
+        <h2 class="section-heading text-start">{{ $t('home.recentlyViewed') }}</h2>
+        <div class="row g-4 mt-2">
+          <div v-for="course in recentlyViewed" :key="course.id" class="col-6 col-md-3">
+            <CourseCardSmall :course="course" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="isAuthenticated && continueCourses.length > 0" class="py-5">
+      <div class="container">
+        <h2 class="section-heading text-start">{{ $t('home.continueLearning') }}</h2>
+        <div class="row g-4 mt-2">
+          <div v-for="course in continueCourses" :key="course.id" class="col-6 col-md-3">
+            <CourseCardSmall :course="course" :show-progress="true" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="featured.popular.length > 0" class="py-5">
+      <div class="container">
+        <h2 class="section-heading text-start">{{ $t('home.popularCourses') }}</h2>
+        <div class="row g-4 mt-2">
+          <div v-for="course in featured.popular" :key="course.id" class="col-6 col-md-3">
+            <CourseCardSmall :course="course" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="featured.top_rated.length > 0" class="py-5" style="background-color: var(--color-bg-light);">
+      <div class="container">
+        <h2 class="section-heading text-start">{{ $t('home.topRated') }}</h2>
+        <div class="row g-4 mt-2">
+          <div v-for="course in featured.top_rated" :key="course.id" class="col-6 col-md-3">
+            <CourseCardSmall :course="course" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="featured.newest.length > 0" class="py-5">
+      <div class="container">
+        <h2 class="section-heading text-start">{{ $t('home.newCourses') }}</h2>
+        <div class="row g-4 mt-2">
+          <div v-for="course in featured.newest" :key="course.id" class="col-6 col-md-3">
+            <CourseCardSmall :course="course" />
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="stats-section py-5">
       <div class="container">
         <h2 class="section-heading">{{ $t('home.stats') }}</h2>
@@ -73,7 +128,7 @@
               <div class="stat-icon-ring">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               </div>
-              <div class="stat-number">150+</div>
+              <div class="stat-number">{{ stats.course_count || 0 }}</div>
               <div class="stat-label">{{ $t('home.courses') }}</div>
               <div class="stat-bar"><div class="stat-bar-fill" style="width: 75%"></div></div>
             </div>
@@ -83,7 +138,7 @@
               <div class="stat-icon-ring">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
-              <div class="stat-number">10K+</div>
+              <div class="stat-number">{{ stats.student_count || 0 }}</div>
               <div class="stat-label">{{ $t('home.students') }}</div>
               <div class="stat-bar"><div class="stat-bar-fill" style="width: 90%"></div></div>
             </div>
@@ -93,7 +148,7 @@
               <div class="stat-icon-ring">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
-              <div class="stat-number">50+</div>
+              <div class="stat-number">{{ stats.instructor_count || 0 }}</div>
               <div class="stat-label">{{ $t('home.instructors') }}</div>
               <div class="stat-bar"><div class="stat-bar-fill" style="width: 50%"></div></div>
             </div>
@@ -192,9 +247,13 @@ import flexibleImg from '@/assets/images/flexible.jpg'
 import certificateImg from '@/assets/images/certificate.jpg'
 import communityImg from '@/assets/images/community.jpg'
 import studyImg from '@/assets/images/study.jpg'
+import CourseCardSmall from '@/components/courses/CourseCardSmall.vue'
+import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 export default {
   name: 'HomeView',
+  components: { CourseCardSmall },
   data() {
     return {
       heroBg,
@@ -203,6 +262,38 @@ export default {
       certificateImg,
       communityImg,
       studyImg,
+      featured: { popular: [], top_rated: [], newest: [] },
+      continueCourses: [],
+      recentlyViewed: [],
+      stats: { course_count: 0, student_count: 0, instructor_count: 0 },
+    }
+  },
+  computed: {
+    isAuthenticated() { return useAuthStore().isAuthenticated },
+  },
+  async created() {
+    try {
+      const [featuredRes, statsRes] = await Promise.all([
+        api.get('/courses/featured'),
+        api.get('/courses/stats'),
+      ])
+      this.featured = featuredRes.data.data
+      this.stats = statsRes.data.data
+    } catch {
+      // ignore
+    }
+    try {
+      this.recentlyViewed = JSON.parse(localStorage.getItem('learnify_recently_viewed') || '[]').slice(0, 4)
+    } catch {
+      // ignore
+    }
+    if (this.isAuthenticated) {
+      try {
+        const { data } = await api.get('/courses/continue')
+        this.continueCourses = data.data || []
+      } catch {
+        // ignore
+      }
     }
   },
 }

@@ -131,6 +131,9 @@ export default {
       if (e.code === 'ArrowRight') { video.currentTime += 10 }
       if (e.code === 'ArrowLeft') { video.currentTime -= 10 }
     },
+    seekTo(seconds) {
+      this.$refs.video.currentTime = seconds
+    },
     formatTime(seconds) {
       const m = Math.floor(seconds / 60)
       const s = Math.floor(seconds % 60)

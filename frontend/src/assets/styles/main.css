@@ -11,12 +11,13 @@
   --color-bg-secondary: #e6f3fe;
   --color-bg-light: #f7f7f5;
   --color-bg-hover: rgba(55, 53, 47, 0.08);
-  --color-border: rgba(55, 53, 47, 0.09);
+  --color-border: rgba(55, 53, 47, 0.16);
+  --color-border-strong: rgba(55, 53, 47, 0.24);
   --color-border-input: #cfcfcf;
   --color-divider: rgba(55, 53, 47, 0.16);
-  --shadow-sm: rgba(15, 15, 15, 0.1) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 2px 4px;
-  --shadow-md: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px, rgba(15, 15, 15, 0.2) 0px 9px 24px;
-  --shadow-lg: 0px 20px 50px rgba(0, 0, 0, 0.08), 0px 6px 16px rgba(0, 0, 0, 0.04);
+  --shadow-sm: rgba(15, 15, 15, 0.08) 0px 0px 0px 1px, rgba(15, 15, 15, 0.12) 0px 2px 6px;
+  --shadow-md: rgba(15, 15, 15, 0.08) 0px 0px 0px 1px, rgba(15, 15, 15, 0.12) 0px 4px 12px, rgba(15, 15, 15, 0.16) 0px 12px 28px;
+  --shadow-lg: 0px 20px 50px rgba(0, 0, 0, 0.1), 0px 6px 16px rgba(0, 0, 0, 0.06);
 }
 
 
@@ -64,23 +65,26 @@ a:hover {
 
 .card {
   background-color: var(--color-bg);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border-strong);
   border-radius: 8px;
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
 }
 
 .card:hover {
   box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
   transform: translateY(-2px);
 }
 
 .form-control, .form-select {
-  border: 1px solid var(--color-border-input);
+  border: 1.5px solid var(--color-border-input);
   border-radius: 4px;
   padding: 0.6rem 0.8rem;
   background-color: var(--color-bg-light);
   color: var(--color-text);
   font-size: 0.95rem;
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
 }
 

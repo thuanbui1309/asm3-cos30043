@@ -4,6 +4,31 @@ export const vFocus = {
   },
 }
 
+export const vBookmarkPulse = {
+  mounted(el) {
+    el.addEventListener('click', () => {
+      el.style.transition = 'transform 0.15s ease'
+      el.style.transform = 'scale(1.15)'
+      setTimeout(() => { el.style.transform = 'scale(1)' }, 150)
+    })
+  },
+}
+
+export const vMentionHighlight = {
+  mounted(el) {
+    applyMentionHighlight(el)
+  },
+  updated(el) {
+    applyMentionHighlight(el)
+  },
+}
+
+function applyMentionHighlight(el) {
+  const text = el.textContent
+  if (!text.includes('@[')) return
+  el.innerHTML = text.replace(/@\[([^\]]+)\]/g, '<span style="color: var(--color-primary); font-weight: 600;">@$1</span>')
+}
+
 export const vTooltip = {
   mounted(el, binding) {
     el.setAttribute('title', binding.value)

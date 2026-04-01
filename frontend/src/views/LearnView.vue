@@ -7,19 +7,62 @@
       <template v-else>
         <VideoPlayer
           v-if="currentLesson"
+          ref="videoPlayer"
           :src="currentLesson.video_url || ''"
           :key="currentLesson.id"
           @timeupdate="onTimeUpdate"
+          @ended="onVideoEnded"
         />
         <div class="lesson-header">
           <h4>{{ currentLesson?.title }}</h4>
           <p class="text-muted">{{ course?.title }}</p>
         </div>
+
+        <div class="learn-tabs">
+          <button
+            v-for="tab in ['about', 'notes', 'discussion']"
+            :key="tab"
+            class="learn-tab"
+            :class="{ active: activeTab === tab }"
+            @click="activeTab = tab"
+          >
+            {{ $t(`${tab === 'about' ? 'courses.course' : tab === 'notes' ? 'notes.title' : 'comments.title'}`) }}
+          </button>
+        </div>
+
+        <div class="tab-content">
+          <div v-if="activeTab === 'about'" class="tab-pane">
+            <p v-if="currentLesson?.description">{{ currentLesson.description }}</p>
+            <p v-else class="text-muted">{{ $t('courses.noResults') }}</p>
+          </div>
+          <div v-if="activeTab === 'notes'" class="tab-pane">
+            <LessonNotes
+              v-if="currentLesson"
+              :lesson-id="currentLesson.id"
+              :current-time="currentVideoTime"
+              @seek="seekVideo"
+            />
+          </div>
+          <div v-if="activeTab === 'discussion'" class="tab-pane">
+            <CommentSection
+              v-if="currentLesson"
+              :lesson-id="currentLesson.id"
+            />
+          </div>
+        </div>
       </template>
     </div>
 
     <aside class="learn-sidebar">
-      <h5 class="sidebar-title">{{ $t('courses.lessons') }}</h5>
+      <div class="sidebar-header">
+        <h5 class="sidebar-title">{{ $t('courses.lessons') }}</h5>
+        <div class="progress-summary" v-if="lessons.length > 0">
+          <span class="progress-text">{{ completedCount }} / {{ lessons.length }}</span>
+          <div class="progress-bar-mini">
+            <div class="progress-bar-fill-mini" :style="{ width: `${progressPercent}%` }"></div>
+          </div>
+        </div>
+      </div>
       <div
         v-for="(lesson, index) in lessons"
         :key="lesson.id"
@@ -41,11 +84,13 @@
 
 <script>
 import VideoPlayer from '@/components/courses/VideoPlayer.vue'
+import LessonNotes from '@/components/courses/LessonNotes.vue'
+import CommentSection from '@/components/courses/CommentSection.vue'
 import api from '@/services/api'
 
 export default {
   name: 'LearnView',
-  components: { VideoPlayer },
+  components: { VideoPlayer, LessonNotes, CommentSection },
   data() {
     return {
       course: null,
@@ -54,7 +99,18 @@ export default {
       loading: true,
       enrollmentId: null,
       progress: {},
+      activeTab: 'about',
+      currentVideoTime: 0,
     }
+  },
+  computed: {
+    completedCount() {
+      return this.lessons.filter((l) => this.progress[l.id]).length
+    },
+    progressPercent() {
+      if (this.lessons.length === 0) return 0
+      return Math.round((this.completedCount / this.lessons.length) * 100)
+    },
   },
   async created() {
     try {
@@ -82,14 +138,28 @@ export default {
   methods: {
     selectLesson(lesson) {
       this.currentLesson = lesson
+      this.activeTab = 'about'
     },
     onTimeUpdate(time) {
+      this.currentVideoTime = time
       if (!this.enrollmentId || !this.currentLesson) return
       if (time > 5 && !this.progress[this.currentLesson.id]) {
         this.progress = { ...this.progress, [this.currentLesson.id]: true }
         api.put(`/enrollments/${this.enrollmentId}/progress`, {
           progress: this.progress,
         }).catch(() => {})
+      }
+    },
+    onVideoEnded() {
+      const currentIndex = this.lessons.findIndex((l) => l.id === this.currentLesson?.id)
+      if (currentIndex >= 0 && currentIndex < this.lessons.length - 1) {
+        this.currentLesson = this.lessons[currentIndex + 1]
+      }
+    },
+    seekVideo(seconds) {
+      const video = this.$refs.videoPlayer?.$refs?.video
+      if (video) {
+        video.currentTime = seconds
       }
     },
   },
@@ -111,6 +181,39 @@ export default {
     padding: 1.5rem;
   }
 
+  .learn-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--color-border);
+    padding: 0 1.5rem;
+    gap: 0;
+  }
+
+  .learn-tab {
+    padding: 0.6rem 1.25rem;
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .learn-tab:hover {
+    color: var(--color-text);
+  }
+
+  .learn-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+  }
+
+  .tab-content {
+    padding: 1.5rem;
+  }
+
   .learn-sidebar {
     width: 320px;
     border-left: 1px solid var(--color-border);
@@ -119,9 +222,41 @@ export default {
     flex-shrink: 0;
   }
 
-  .sidebar-title {
+  .sidebar-header {
     padding: 1rem 1rem 0.5rem;
+  }
+
+  .sidebar-title {
     font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .progress-text {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    white-space: nowrap;
+  }
+
+  .progress-bar-mini {
+    flex: 1;
+    height: 4px;
+    background-color: var(--color-bg-hover);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill-mini {
+    height: 100%;
+    background-color: var(--color-primary);
+    border-radius: 2px;
+    transition: width 0.3s ease;
   }
 
   .sidebar-lesson {

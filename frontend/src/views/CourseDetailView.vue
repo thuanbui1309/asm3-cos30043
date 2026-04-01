@@ -27,7 +27,11 @@
               {{ course.difficulty }}
             </span>
             <span class="meta-item">{{ lessons.length }} {{ $t('courses.lessons') }}</span>
-            <span class="meta-item">{{ course.like_count || 0 }} {{ $t('courses.like') }}</span>
+            <span class="meta-item">{{ course.enrollment_count || 0 }} {{ $t('courses.students') }}</span>
+            <span class="meta-item rating-meta" v-if="Number(course.avg_rating) > 0">
+              <StarRating :rating="Number(course.avg_rating)" size="sm" />
+              {{ Number(course.avg_rating).toFixed(1) }} ({{ course.review_count }})
+            </span>
           </div>
 
           <div class="course-description mb-4">
@@ -54,6 +58,14 @@
               </span>
             </div>
           </div>
+
+          <ReviewSection
+            :course-id="course.id"
+            :is-enrolled="isEnrolled"
+            :is-authenticated="isAuthenticated"
+            @review-changed="fetchCourse"
+            class="mt-5"
+          />
         </div>
 
         <div class="col-12 col-lg-4">
@@ -101,6 +113,16 @@
                 ({{ course.like_count || 0 }})
               </button>
 
+              <button
+                v-if="isAuthenticated"
+                class="btn btn-outline-secondary"
+                :class="{ 'btn-bookmarked': course.user_bookmarked }"
+                v-bookmark-pulse
+                @click="toggleBookmark"
+              >
+                {{ course.user_bookmarked ? $t('bookmarks.bookmarked') : $t('bookmarks.bookmark') }}
+              </button>
+
               <router-link
                 v-if="isOwner"
                 :to="`/courses/${course.id}/edit`"
@@ -119,9 +141,12 @@
 <script>
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
+import StarRating from '@/components/courses/StarRating.vue'
+import ReviewSection from '@/components/courses/ReviewSection.vue'
 
 export default {
   name: 'CourseDetailView',
+  components: { StarRating, ReviewSection },
   data() {
     return {
       course: null,
@@ -149,6 +174,7 @@ export default {
         this.course = data.data.course || data.data
         this.lessons = data.data.lessons || []
         this.isEnrolled = data.data.is_enrolled || false
+        this.saveRecentlyViewed(this.course)
       } catch {
         this.$router.push('/courses')
       } finally {
@@ -175,6 +201,33 @@ export default {
       try {
         await api.post('/enrollments', { course_id: this.course.id })
         this.isEnrolled = true
+      } catch {
+        // ignore
+      }
+    },
+    async toggleBookmark() {
+      try {
+        const { data } = await api.post(`/courses/${this.course.id}/bookmark`)
+        this.course.user_bookmarked = data.data.bookmarked
+      } catch {
+        // ignore
+      }
+    },
+    saveRecentlyViewed(course) {
+      try {
+        const key = 'learnify_recently_viewed'
+        let recent = JSON.parse(localStorage.getItem(key) || '[]')
+        recent = recent.filter((c) => c.id !== course.id)
+        recent.unshift({
+          id: course.id,
+          title: course.title,
+          thumbnail_url: course.thumbnail_url,
+          instructor_name: course.instructor_name,
+          price: course.price,
+          avg_rating: course.avg_rating,
+        })
+        recent = recent.slice(0, 5)
+        localStorage.setItem(key, JSON.stringify(recent))
       } catch {
         // ignore
       }
@@ -296,9 +349,21 @@ export default {
     color: var(--color-text);
   }
 
+  .rating-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
   .btn-liked {
     background-color: var(--color-primary);
     color: #fff;
     border-color: var(--color-primary);
+  }
+
+  .btn-bookmarked {
+    background-color: #f5a623;
+    color: #fff;
+    border-color: #f5a623;
   }
 </style>

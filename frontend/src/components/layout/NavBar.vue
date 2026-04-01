@@ -32,6 +32,7 @@
 
         <div class="d-flex align-items-center gap-2">
           <template v-if="isAuthenticated">
+            <NotificationBell />
             <div class="dropdown">
               <button class="avatar-btn" data-bs-toggle="dropdown" aria-expanded="false" :aria-label="$t('nav.account')">
                 {{ userInitials }}
@@ -104,9 +105,11 @@
 
 <script>
 import { useAuthStore } from '@/stores/auth'
+import NotificationBell from '@/components/common/NotificationBell.vue'
 
 export default {
   name: 'NavBar',
+  components: { NotificationBell },
   data() {
     return {
       showLangModal: false,

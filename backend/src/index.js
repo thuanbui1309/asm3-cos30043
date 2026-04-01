@@ -8,6 +8,11 @@ const lessonsRoutes = require('./routes/lessons');
 const enrollmentsRoutes = require('./routes/enrollments');
 const paymentsRoutes = require('./routes/payments');
 const uploadRoutes = require('./routes/upload');
+const reviewsRoutes = require('./routes/reviews');
+const bookmarksRoutes = require('./routes/bookmarks');
+const commentsRoutes = require('./routes/comments');
+const notificationsRoutes = require('./routes/notifications');
+const notesRoutes = require('./routes/notes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +30,12 @@ app.use('/api', lessonsRoutes);
 app.use('/api/enrollments', enrollmentsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api', reviewsRoutes);
+app.use('/api/bookmarks', bookmarksRoutes);
+app.use('/api', bookmarksRoutes);
+app.use('/api', commentsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api', notesRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ success: true, data: { status: 'ok' } });

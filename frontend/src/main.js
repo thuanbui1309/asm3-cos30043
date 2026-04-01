@@ -4,7 +4,7 @@ import { createI18n } from 'vue-i18n'
 import router from './router'
 import App from './App.vue'
 
-import { vFocus, vTooltip } from './directives'
+import { vFocus, vTooltip, vBookmarkPulse, vMentionHighlight } from './directives'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import './assets/styles/main.css'
@@ -24,6 +24,8 @@ const i18n = createI18n({
 const app = createApp(App)
 app.directive('focus', vFocus)
 app.directive('tooltip', vTooltip)
+app.directive('bookmark-pulse', vBookmarkPulse)
+app.directive('mention-highlight', vMentionHighlight)
 app.use(createPinia())
 app.use(router)
 app.use(i18n)

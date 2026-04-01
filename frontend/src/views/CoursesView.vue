@@ -16,10 +16,33 @@
               class="search-input"
               :placeholder="$t('courses.search')"
               aria-label="Search courses"
+              @focus="showAutocomplete = true"
+              @blur="hideAutocomplete"
             />
+            <div v-if="showAutocomplete && autocompleteSuggestions.length > 0" class="autocomplete-dropdown">
+              <div
+                v-for="course in autocompleteSuggestions"
+                :key="course.id"
+                class="autocomplete-item"
+                @mousedown.prevent="$router.push(`/courses/${course.id}`)"
+              >
+                <img :src="course.thumbnail_url || defaultThumbnail" :alt="course.title" class="autocomplete-thumb" />
+                <div class="autocomplete-info">
+                  <div class="autocomplete-title">{{ course.title }}</div>
+                  <div class="autocomplete-meta">{{ course.instructor_name }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="toolbar-right">
+          <select v-model="sortBy" class="filter-select" aria-label="Sort by">
+            <option value="newest">{{ $t('courses.sortNewest') }}</option>
+            <option value="popular">{{ $t('courses.sortPopular') }}</option>
+            <option value="rating">{{ $t('courses.sortRating') }}</option>
+            <option value="price-asc">{{ $t('courses.sortPriceAsc') }}</option>
+            <option value="price-desc">{{ $t('courses.sortPriceDesc') }}</option>
+          </select>
           <select v-model="categoryFilter" class="filter-select" aria-label="Filter by category">
             <option value="">{{ $t('courses.all') }} {{ $t('courses.category') }}</option>
             <option v-for="cat in categories" :key="cat" :value="cat">
@@ -106,9 +129,14 @@
                 <h5 class="course-title">{{ course.title }}</h5>
                 <p class="course-instructor">{{ $t('courses.byInstructor') }} {{ course.instructor_name }}</p>
                 <div class="course-footer">
+                  <span class="meta-item rating-item" v-if="Number(course.avg_rating) > 0">
+                    <StarRating :rating="Number(course.avg_rating)" size="sm" />
+                    <span>{{ Number(course.avg_rating).toFixed(1) }} ({{ course.review_count }})</span>
+                  </span>
+                  <span class="meta-sep" v-if="Number(course.avg_rating) > 0">·</span>
                   <span class="meta-item">{{ course.lesson_count || 0 }} {{ $t('courses.lessons') }}</span>
                   <span class="meta-sep">·</span>
-                  <span class="meta-item">{{ course.like_count || 0 }} {{ $t('courses.like') }}</span>
+                  <span class="meta-item">{{ course.enrollment_count || 0 }} {{ $t('courses.students') }}</span>
                 </div>
               </div>
             </div>
@@ -127,9 +155,11 @@
 <script>
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import StarRating from '@/components/courses/StarRating.vue'
 
 export default {
   name: 'CoursesView',
+  components: { StarRating },
   data() {
     return {
       courses: [],
@@ -139,10 +169,12 @@ export default {
       categoryFilter: '',
       difficultyFilter: '',
       priceFilter: '',
+      sortBy: 'newest',
       ownershipFilter: 'all',
       visibleCount: 15,
       categories: ['web-dev', 'data-science', 'mobile-dev', 'design', 'devops', 'other'],
       defaultThumbnail: 'https://placehold.co/400x225/e8e8e8/999?text=Course',
+      showAutocomplete: false,
     }
   },
   computed: {
@@ -178,6 +210,13 @@ export default {
       }
       return result
     },
+    autocompleteSuggestions() {
+      if (!this.search || this.search.length < 2) return []
+      const q = this.search.toLowerCase()
+      return this.courses
+        .filter((c) => c.title.toLowerCase().includes(q))
+        .slice(0, 5)
+    },
     visibleCourses() {
       return this.filteredCourses.slice(0, this.visibleCount)
     },
@@ -188,6 +227,7 @@ export default {
     difficultyFilter() { this.visibleCount = 15 },
     priceFilter() { this.visibleCount = 15 },
     ownershipFilter() { this.visibleCount = 15 },
+    sortBy() { this.visibleCount = 15; this.fetchCourses() },
   },
   async created() {
     await this.fetchCourses()
@@ -196,10 +236,13 @@ export default {
     }
   },
   methods: {
+    hideAutocomplete() {
+      setTimeout(() => { this.showAutocomplete = false }, 200)
+    },
     async fetchCourses() {
       this.loading = true
       try {
-        const { data } = await api.get('/courses?limit=1000')
+        const { data } = await api.get(`/courses?limit=1000&sort=${this.sortBy}`)
         this.courses = data.data.courses || []
       } catch {
         this.courses = []
@@ -306,6 +349,60 @@ export default {
 
   .search-input:focus {
     border-color: var(--color-primary);
+  }
+
+  .autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg);
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    z-index: 20;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .autocomplete-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.1s;
+  }
+
+  .autocomplete-item:hover {
+    background-color: var(--color-bg-hover);
+  }
+
+  .autocomplete-thumb {
+    width: 48px;
+    height: 30px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background-color: var(--color-bg-light);
+  }
+
+  .autocomplete-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .autocomplete-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .autocomplete-meta {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
   }
 
   .filter-select {
@@ -491,5 +588,11 @@ export default {
   .meta-sep {
     color: var(--color-border);
     font-size: 0.75rem;
+  }
+
+  .rating-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
   }
 </style>

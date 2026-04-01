@@ -29,6 +29,13 @@
             <div class="stat-value">{{ totalRevenue }}</div>
             <div class="stat-label">{{ $t('myCourses.estRevenue') }}</div>
           </div>
+          <div class="stat-card">
+            <div class="stat-value">
+              <StarRating :rating="avgRatingAll" size="sm" />
+              {{ avgRatingAll > 0 ? avgRatingAll.toFixed(1) : '—' }}
+            </div>
+            <div class="stat-label">{{ $t('myCourses.avgRating') }}</div>
+          </div>
         </div>
 
         <div v-if="myCourses.length === 0" class="empty-state">
@@ -74,6 +81,7 @@
                   <th scope="col">{{ $t('courses.category') }}</th>
                   <th scope="col">{{ $t('courses.difficulty') }}</th>
                   <th scope="col">{{ $t('courses.students') }}</th>
+                  <th scope="col">{{ $t('myCourses.avgRating') }}</th>
                   <th scope="col">{{ $t('courses.price') }}</th>
                   <th scope="col">{{ $t('courses.actions') }}</th>
                 </tr>
@@ -102,6 +110,13 @@
                     </span>
                   </td>
                   <td class="col-num">{{ course.student_count || 0 }}</td>
+                  <td class="col-rating">
+                    <template v-if="Number(course.avg_rating) > 0">
+                      <StarRating :rating="Number(course.avg_rating)" size="sm" />
+                      <span class="rating-text">{{ Number(course.avg_rating).toFixed(1) }} ({{ course.review_count }})</span>
+                    </template>
+                    <span v-else class="text-muted">—</span>
+                  </td>
                   <td class="col-price">
                     {{ course.price > 0 ? Number(course.price).toLocaleString('vi-VN') + '₫' : $t('courses.free') }}
                   </td>
@@ -156,46 +171,61 @@
           </div>
 
           <div class="quick-filters mb-3">
-            <button :class="['chip', studentStatusFilter === 'all' ? 'chip-active' : '']" @click="studentStatusFilter = 'all'">{{ $t('courses.all') }}</button>
-            <button :class="['chip', studentStatusFilter === 'not-started' ? 'chip-active' : '']" @click="studentStatusFilter = 'not-started'">{{ $t('myCourses.notStarted') }}</button>
-            <button :class="['chip', studentStatusFilter === 'in-progress' ? 'chip-active' : '']" @click="studentStatusFilter = 'in-progress'">{{ $t('myCourses.inProgress') }}</button>
-            <button :class="['chip', studentStatusFilter === 'completed' ? 'chip-active' : '']" @click="studentStatusFilter = 'completed'">{{ $t('myCourses.completed') }}</button>
+            <button :class="['chip', studentStatusFilter === 'all' ? 'chip-active' : '']" @click="studentStatusFilter = 'all'; studentTab = 'enrolled'">{{ $t('courses.all') }}</button>
+            <button :class="['chip', studentStatusFilter === 'not-started' ? 'chip-active' : '']" @click="studentStatusFilter = 'not-started'; studentTab = 'enrolled'">{{ $t('myCourses.notStarted') }}</button>
+            <button :class="['chip', studentStatusFilter === 'in-progress' ? 'chip-active' : '']" @click="studentStatusFilter = 'in-progress'; studentTab = 'enrolled'">{{ $t('myCourses.inProgress') }}</button>
+            <button :class="['chip', studentStatusFilter === 'completed' ? 'chip-active' : '']" @click="studentStatusFilter = 'completed'; studentTab = 'enrolled'">{{ $t('myCourses.completed') }}</button>
+            <button :class="['chip', studentTab === 'bookmarked' ? 'chip-active' : '']" @click="studentTab = 'bookmarked'; fetchBookmarks()">{{ $t('myCourses.bookmarked') }}</button>
           </div>
 
-          <div v-if="filteredEnrollments.length === 0" class="empty-state">
-            <p class="text-muted mb-0">{{ $t('courses.noFilterMatch') }}</p>
-          </div>
+          <template v-if="studentTab === 'enrolled'">
+            <div v-if="filteredEnrollments.length === 0" class="empty-state">
+              <p class="text-muted mb-0">{{ $t('courses.noFilterMatch') }}</p>
+            </div>
 
-          <div v-else class="row g-4">
-            <div
-              v-for="item in filteredEnrollments"
-              :key="item.id"
-              class="col-12 col-sm-6 col-lg-4"
-            >
-              <div class="my-course-card" @click="$router.push(`/courses/${item.course_id}/learn`)">
-                <div class="my-course-thumbnail">
-                  <img :src="item.thumbnail_url || defaultThumbnail" :alt="item.title" />
-                  <div class="progress-overlay">
-                    <div class="progress-bar-track">
-                      <div class="progress-bar-fill" :style="{ width: `${progressPercent(item)}%` }"></div>
+            <div v-else class="row g-4">
+              <div
+                v-for="item in filteredEnrollments"
+                :key="item.id"
+                class="col-12 col-sm-6 col-lg-4"
+              >
+                <div class="my-course-card" @click="$router.push(`/courses/${item.course_id}/learn`)">
+                  <div class="my-course-thumbnail">
+                    <img :src="item.thumbnail_url || defaultThumbnail" :alt="item.title" />
+                    <span v-if="progressPercent(item) === 100" class="completed-badge">{{ $t('myCourses.completedBadge') }}</span>
+                    <div class="progress-overlay">
+                      <div class="progress-bar-track">
+                        <div class="progress-bar-fill" :style="{ width: `${progressPercent(item)}%` }"></div>
+                      </div>
+                      <span class="progress-label">{{ progressPercent(item) }}%</span>
                     </div>
-                    <span class="progress-label">{{ progressPercent(item) }}%</span>
                   </div>
-                </div>
-                <div class="my-course-body">
-                  <h5 class="course-title">{{ item.title }}</h5>
-                  <p class="course-instructor">{{ $t('courses.byInstructor') }} {{ item.instructor_name }}</p>
-                  <router-link
-                    :to="`/courses/${item.course_id}/learn`"
-                    class="btn btn-sm btn-primary w-100 mt-auto"
-                    @click.stop
-                  >
-                    {{ $t('courses.enrolled') }}
-                  </router-link>
+                  <div class="my-course-body">
+                    <h5 class="course-title">{{ item.title }}</h5>
+                    <p class="course-instructor">{{ $t('courses.byInstructor') }} {{ item.instructor_name }}</p>
+                    <router-link
+                      :to="`/courses/${item.course_id}/learn`"
+                      class="btn btn-sm btn-primary w-100 mt-auto"
+                      @click.stop
+                    >
+                      {{ $t('courses.enrolled') }}
+                    </router-link>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </template>
+
+          <template v-if="studentTab === 'bookmarked'">
+            <div v-if="bookmarkedCourses.length === 0" class="empty-state">
+              <p class="text-muted mb-0">{{ $t('bookmarks.noBookmarks') }}</p>
+            </div>
+            <div v-else class="row g-4">
+              <div v-for="course in bookmarkedCourses" :key="course.id" class="col-12 col-sm-6 col-lg-4">
+                <CourseCardSmall :course="course" />
+              </div>
+            </div>
+          </template>
         </template>
       </template>
     </template>
@@ -228,9 +258,12 @@
 <script>
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
+import StarRating from '@/components/courses/StarRating.vue'
+import CourseCardSmall from '@/components/courses/CourseCardSmall.vue'
 
 export default {
   name: 'MyCoursesView',
+  components: { StarRating, CourseCardSmall },
   data() {
     return {
       myCourses: [],
@@ -245,10 +278,17 @@ export default {
       studentSearch: '',
       studentCategoryFilter: '',
       studentStatusFilter: 'all',
+      studentTab: 'enrolled',
+      bookmarkedCourses: [],
     }
   },
   computed: {
     isInstructor() { return useAuthStore().isInstructor },
+    avgRatingAll() {
+      const rated = this.myCourses.filter((c) => Number(c.avg_rating) > 0)
+      if (rated.length === 0) return 0
+      return rated.reduce((sum, c) => sum + Number(c.avg_rating), 0) / rated.length
+    },
     totalStudents() {
       return this.myCourses.reduce((sum, c) => sum + (c.student_count || 0), 0)
     },
@@ -329,6 +369,14 @@ export default {
         this.enrollments = []
       } finally {
         this.loading = false
+      }
+    },
+    async fetchBookmarks() {
+      try {
+        const { data } = await api.get('/bookmarks')
+        this.bookmarkedCourses = data.data || []
+      } catch {
+        this.bookmarkedCourses = []
       }
     },
     openDeleteModal(course) {
@@ -448,9 +496,32 @@ export default {
     color: #fff;
   }
 
+  .completed-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    background: #28a745;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    z-index: 1;
+  }
+
+  .col-rating {
+    white-space: nowrap;
+  }
+
+  .col-rating .rating-text {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    margin-left: 0.25rem;
+  }
+
   .stats-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
   }
 
@@ -750,7 +821,7 @@ export default {
 
   @media (max-width: 767.98px) {
     .stats-row {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
     }
 
     .dashboard-table th:nth-child(3),

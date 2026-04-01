@@ -58,7 +58,12 @@
     "testimonial3Role": "UX Designer",
     "getStarted": "Start Learning Today",
     "getStartedDesc": "Join thousands of learners and begin your learning journey today.",
-    "signUpFree": "Sign Up Free"
+    "signUpFree": "Sign Up Free",
+    "continueLearning": "Continue Learning",
+    "popularCourses": "Popular Courses",
+    "topRated": "Top Rated",
+    "newCourses": "New Courses",
+    "recentlyViewed": "Recently Viewed"
   },
   "news": {
     "title": "News",
@@ -125,7 +130,9 @@
     "page": "Page",
     "cancel": "Cancel",
     "delete": "Delete",
-    "back": "Back"
+    "back": "Back",
+    "edit": "Edit",
+    "save": "Save"
   },
   "myCourses": {
     "totalCourses": "Total Courses",
@@ -136,7 +143,10 @@
     "notStarted": "Not Started",
     "inProgress": "In Progress",
     "completed": "Completed",
-    "deleteWarning": "This will permanently remove the course, all lessons, and enrollment records."
+    "deleteWarning": "This will permanently remove the course, all lessons, and enrollment records.",
+    "avgRating": "Avg. Rating",
+    "bookmarked": "Bookmarked",
+    "completedBadge": "Completed"
   },
   "profile": {
     "title": "My Profile",
@@ -212,7 +222,12 @@
       "design": "Design",
       "devops": "DevOps",
       "other": "Other"
-    }
+    },
+    "sortNewest": "Newest",
+    "sortPopular": "Most Popular",
+    "sortRating": "Highest Rated",
+    "sortPriceAsc": "Price: Low to High",
+    "sortPriceDesc": "Price: High to Low"
   },
   "auth": {
     "loginTitle": "Welcome Back",
@@ -254,6 +269,49 @@
     "noQrConfig": "Bank transfer QR not configured. Please contact support.",
     "back": "Back to course",
     "qrLoadFailed": "Could not load QR image. Please try again or contact support."
+  },
+  "reviews": {
+    "title": "Reviews",
+    "reviews": "reviews",
+    "writeReview": "Write a Review",
+    "editReview": "Edit Your Review",
+    "yourReview": "Your Review",
+    "commentPlaceholder": "Share your experience with this course...",
+    "submit": "Submit Review",
+    "save": "Save Changes",
+    "loadMore": "Load More Reviews"
+  },
+  "bookmarks": {
+    "bookmark": "Bookmark",
+    "bookmarked": "Bookmarked",
+    "title": "Bookmarked Courses",
+    "noBookmarks": "You haven't bookmarked any courses yet."
+  },
+  "comments": {
+    "title": "Discussion",
+    "writeComment": "Write a comment...",
+    "reply": "Reply",
+    "replies": "replies",
+    "submit": "Post",
+    "editing": "Editing",
+    "loadMore": "Load More",
+    "noComments": "No comments yet. Start the discussion!",
+    "deleteConfirm": "Delete this comment?"
+  },
+  "notes": {
+    "title": "Notes",
+    "addNote": "Add Note",
+    "placeholder": "Write your note...",
+    "noNotes": "No notes yet. Add your first note!",
+    "save": "Save",
+    "atTimestamp": "at"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications",
+    "mentioned": "mentioned you in a comment",
+    "replied": "replied to your comment"
   },
   "footer": {
     "rights": "All rights reserved."

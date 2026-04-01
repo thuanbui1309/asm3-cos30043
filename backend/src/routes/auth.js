@@ -131,4 +131,21 @@ router.put('/me', authenticate, async (req, res, next) => {
   }
 });
 
+router.get('/search', authenticate, async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 1) {
+      return res.json({ success: true, data: [] });
+    }
+    const result = await sql`
+      SELECT id, username, avatar_url FROM users
+      WHERE username ILIKE ${q + '%'}
+      LIMIT 5
+    `;
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

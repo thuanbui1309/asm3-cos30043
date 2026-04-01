@@ -7,23 +7,35 @@ const router = express.Router();
 
 router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    const { q, category, difficulty, page = 1, limit = 10 } = req.query;
+    const { q, category, difficulty, page = 1, limit = 10, sort = 'newest' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const lim = parseInt(limit);
     const search = q ? `%${q}%` : null;
     const cat = category || null;
     const diff = difficulty || null;
 
+    const orderClauses = {
+      newest: sql`c.created_at DESC`,
+      popular: sql`enrollment_count DESC, c.created_at DESC`,
+      rating: sql`avg_rating DESC, review_count DESC`,
+      'price-asc': sql`c.price ASC, c.created_at DESC`,
+      'price-desc': sql`c.price DESC, c.created_at DESC`,
+    };
+    const orderBy = orderClauses[sort] || orderClauses.newest;
+
     const courses = await sql`
       SELECT c.*, u.username AS instructor_name,
         (SELECT COUNT(*) FROM likes WHERE course_id = c.id)::int AS like_count,
-        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
+        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count,
+        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
+        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count
       FROM courses c
       JOIN users u ON c.instructor_id = u.id
       WHERE (${search}::text IS NULL OR c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
         AND (${cat}::text IS NULL OR c.category = ${cat})
         AND (${diff}::text IS NULL OR c.difficulty = ${diff})
-      ORDER BY c.created_at DESC
+      ORDER BY ${orderBy}
       LIMIT ${lim} OFFSET ${offset}
     `;
 
@@ -52,6 +64,73 @@ router.get('/', optionalAuth, async (req, res, next) => {
   }
 });
 
+router.get('/featured', optionalAuth, async (req, res, next) => {
+  try {
+    const popular = await sql`
+      SELECT c.*, u.username AS instructor_name,
+        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
+        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count,
+        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
+      FROM courses c JOIN users u ON c.instructor_id = u.id
+      ORDER BY enrollment_count DESC LIMIT 4
+    `;
+    const topRated = await sql`
+      SELECT c.*, u.username AS instructor_name,
+        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
+        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count,
+        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
+      FROM courses c JOIN users u ON c.instructor_id = u.id
+      ORDER BY avg_rating DESC, review_count DESC LIMIT 4
+    `;
+    const newest = await sql`
+      SELECT c.*, u.username AS instructor_name,
+        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
+        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count,
+        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
+      FROM courses c JOIN users u ON c.instructor_id = u.id
+      ORDER BY c.created_at DESC LIMIT 4
+    `;
+    res.json({ success: true, data: { popular, top_rated: topRated, newest } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/continue', authenticate, async (req, res, next) => {
+  try {
+    const result = await sql`
+      SELECT c.*, u.username AS instructor_name, e.progress,
+        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count,
+        (SELECT COALESCE(json_agg(id ORDER BY order_index), '[]'::json) FROM lessons WHERE course_id = c.id) AS lesson_ids
+      FROM enrollments e
+      JOIN courses c ON e.course_id = c.id
+      JOIN users u ON c.instructor_id = u.id
+      WHERE e.user_id = ${req.user.id}
+      ORDER BY e.purchased_at DESC LIMIT 4
+    `;
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/stats', async (req, res, next) => {
+  try {
+    const result = await sql`
+      SELECT
+        (SELECT COUNT(*) FROM courses)::int AS course_count,
+        (SELECT COUNT(*) FROM users WHERE role = 'student')::int AS student_count,
+        (SELECT COUNT(*) FROM users WHERE role = 'instructor')::int AS instructor_count
+    `;
+    res.json({ success: true, data: result[0] });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/mine', authenticate, async (req, res, next) => {
   try {
     if (req.user.role !== 'instructor') {
@@ -60,7 +139,9 @@ router.get('/mine', authenticate, async (req, res, next) => {
     const courses = await sql`
       SELECT c.*, u.username AS instructor_name,
         COUNT(DISTINCT e.id)::int AS student_count,
-        COUNT(DISTINCT l.id)::int AS lesson_count
+        COUNT(DISTINCT l.id)::int AS lesson_count,
+        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count
       FROM courses c
       JOIN users u ON c.instructor_id = u.id
       LEFT JOIN enrollments e ON e.course_id = c.id
@@ -80,9 +161,11 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
     const { id } = req.params;
 
     const courseResult = await sql`
-      SELECT c.*, u.username AS instructor_name,
+      SELECT c.*, u.username AS instructor_name, u.bio AS instructor_bio, u.avatar_url AS instructor_avatar,
         (SELECT COUNT(*) FROM likes WHERE course_id = c.id) AS like_count,
-        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count
+        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
+        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
+        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count
       FROM courses c
       JOIN users u ON c.instructor_id = u.id
       WHERE c.id = ${id}
@@ -102,6 +185,7 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
 
     let userLiked = false;
     let isEnrolled = false;
+    let userBookmarked = false;
     if (req.user) {
       const likeResult = await sql`
         SELECT 1 FROM likes WHERE user_id = ${req.user.id} AND course_id = ${id}
@@ -111,6 +195,10 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
         SELECT 1 FROM enrollments WHERE user_id = ${req.user.id} AND course_id = ${id}
       `;
       isEnrolled = enrollResult.length > 0;
+      const bookmarkResult = await sql`
+        SELECT 1 FROM bookmarks WHERE user_id = ${req.user.id} AND course_id = ${id}
+      `;
+      userBookmarked = bookmarkResult.length > 0;
     }
 
     res.json({
@@ -120,6 +208,7 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
         lessons: lessonsResult,
         user_liked: userLiked,
         is_enrolled: isEnrolled,
+        user_bookmarked: userBookmarked,
       },
     });
   } catch (error) {

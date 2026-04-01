@@ -58,7 +58,12 @@
     "testimonial3Role": "Nhà thiết kế UX",
     "getStarted": "Bắt Đầu Học Ngay",
     "getStartedDesc": "Tham gia cùng hàng nghìn học viên và bắt đầu hành trình học tập của bạn ngay hôm nay.",
-    "signUpFree": "Đăng Ký Miễn Phí"
+    "signUpFree": "Đăng Ký Miễn Phí",
+    "continueLearning": "Tiếp Tục Học",
+    "popularCourses": "Khóa Học Phổ Biến",
+    "topRated": "Đánh Giá Cao",
+    "newCourses": "Khóa Học Mới",
+    "recentlyViewed": "Đã Xem Gần Đây"
   },
   "news": {
     "title": "Tin Tức",
@@ -125,7 +130,9 @@
     "page": "Trang",
     "cancel": "Hủy",
     "delete": "Xóa",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "edit": "Sửa",
+    "save": "Lưu"
   },
   "myCourses": {
     "totalCourses": "Tổng khóa học",
@@ -136,7 +143,10 @@
     "notStarted": "Chưa bắt đầu",
     "inProgress": "Đang học",
     "completed": "Đã hoàn thành",
-    "deleteWarning": "Hành động này sẽ xóa vĩnh viễn khóa học, toàn bộ bài học và lịch sử đăng ký."
+    "deleteWarning": "Hành động này sẽ xóa vĩnh viễn khóa học, toàn bộ bài học và lịch sử đăng ký.",
+    "avgRating": "Đánh Giá TB",
+    "bookmarked": "Đã Lưu",
+    "completedBadge": "Hoàn Thành"
   },
   "profile": {
     "title": "Hồ Sơ Của Tôi",
@@ -212,7 +222,12 @@
       "design": "Thiết kế",
       "devops": "DevOps",
       "other": "Khác"
-    }
+    },
+    "sortNewest": "Mới nhất",
+    "sortPopular": "Phổ biến nhất",
+    "sortRating": "Đánh giá cao nhất",
+    "sortPriceAsc": "Giá: Thấp đến Cao",
+    "sortPriceDesc": "Giá: Cao đến Thấp"
   },
   "auth": {
     "loginTitle": "Chào Mừng Trở Lại",
@@ -254,6 +269,49 @@
     "noQrConfig": "Chưa cấu hình QR chuyển khoản. Vui lòng liên hệ hỗ trợ.",
     "back": "Quay lại khóa học",
     "qrLoadFailed": "Không tải được mã QR. Vui lòng thử lại hoặc liên hệ hỗ trợ."
+  },
+  "reviews": {
+    "title": "Đánh Giá",
+    "reviews": "đánh giá",
+    "writeReview": "Viết Đánh Giá",
+    "editReview": "Chỉnh Sửa Đánh Giá",
+    "yourReview": "Đánh Giá Của Bạn",
+    "commentPlaceholder": "Chia sẻ trải nghiệm của bạn về khóa học này...",
+    "submit": "Gửi Đánh Giá",
+    "save": "Lưu Thay Đổi",
+    "loadMore": "Xem Thêm Đánh Giá"
+  },
+  "bookmarks": {
+    "bookmark": "Lưu",
+    "bookmarked": "Đã Lưu",
+    "title": "Khóa Học Đã Lưu",
+    "noBookmarks": "Bạn chưa lưu khóa học nào."
+  },
+  "comments": {
+    "title": "Thảo Luận",
+    "writeComment": "Viết bình luận...",
+    "reply": "Trả lời",
+    "replies": "phản hồi",
+    "submit": "Đăng",
+    "editing": "Đang sửa",
+    "loadMore": "Xem Thêm",
+    "noComments": "Chưa có bình luận. Hãy bắt đầu thảo luận!",
+    "deleteConfirm": "Xóa bình luận này?"
+  },
+  "notes": {
+    "title": "Ghi Chú",
+    "addNote": "Thêm Ghi Chú",
+    "placeholder": "Viết ghi chú...",
+    "noNotes": "Chưa có ghi chú. Thêm ghi chú đầu tiên!",
+    "save": "Lưu",
+    "atTimestamp": "tại"
+  },
+  "notifications": {
+    "title": "Thông Báo",
+    "markAllRead": "Đánh dấu đã đọc tất cả",
+    "noNotifications": "Không có thông báo",
+    "mentioned": "đã nhắc đến bạn trong bình luận",
+    "replied": "đã trả lời bình luận của bạn"
   },
   "footer": {
     "rights": "Mọi quyền được bảo lưu."
