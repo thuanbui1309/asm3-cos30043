@@ -73,27 +73,25 @@
 
             <div class="mb-4">
               <label class="form-label">{{ $t('auth.role') }}</label>
-              <div class="d-flex gap-3">
-                <div class="form-check">
-                  <input
-                    id="roleStudent"
-                    v-model="form.role"
-                    type="radio"
-                    class="form-check-input"
-                    value="student"
-                  />
-                  <label for="roleStudent" class="form-check-label">{{ $t('auth.student') }}</label>
-                </div>
-                <div class="form-check">
-                  <input
-                    id="roleInstructor"
-                    v-model="form.role"
-                    type="radio"
-                    class="form-check-input"
-                    value="instructor"
-                  />
-                  <label for="roleInstructor" class="form-check-label">{{ $t('auth.instructor') }}</label>
-                </div>
+              <div class="role-selector">
+                <button
+                  type="button"
+                  class="role-option"
+                  :class="{ active: form.role === 'student' }"
+                  @click="form.role = 'student'"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                  <span>{{ $t('auth.student') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="role-option"
+                  :class="{ active: form.role === 'instructor' }"
+                  @click="form.role = 'instructor'"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span>{{ $t('auth.instructor') }}</span>
+                </button>
               </div>
             </div>
 
@@ -129,6 +127,9 @@ export default {
       },
       submitted: false,
     }
+  },
+  created() {
+    useAuthStore().error = null
   },
   computed: {
     loading() { return useAuthStore().loading },
@@ -199,6 +200,39 @@ export default {
   .btn-primary:disabled {
     opacity: 0.65;
     border-color: var(--color-primary);
+  }
+
+  .role-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .role-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    border: 2px solid var(--color-border-input);
+    border-radius: 8px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+  }
+
+  .role-option:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .role-option.active {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary);
+    color: #fff;
   }
 
   .auth-footer {

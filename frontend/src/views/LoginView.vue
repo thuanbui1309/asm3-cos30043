@@ -73,6 +73,9 @@ export default {
     loading() { return useAuthStore().loading },
     error() { return useAuthStore().error },
   },
+  created() {
+    useAuthStore().error = null
+  },
   methods: {
     async handleLogin() {
       this.submitted = true
