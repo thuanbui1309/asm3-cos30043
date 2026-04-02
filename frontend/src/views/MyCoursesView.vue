@@ -9,9 +9,9 @@
         </router-link>
       </div>
 
-      <div v-if="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+      <div v-if="loading" class="row g-4">
+        <div v-for="n in 3" :key="n" class="col-12 col-sm-6 col-lg-4">
+          <SkeletonLoader type="card" />
         </div>
       </div>
 
@@ -138,9 +138,9 @@
     <template v-else>
       <h2 class="mb-4">{{ $t('nav.myCourses') }}</h2>
 
-      <div v-if="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+      <div v-if="loading" class="row g-4">
+        <div v-for="n in 3" :key="n" class="col-12 col-sm-6 col-lg-4">
+          <SkeletonLoader type="card" />
         </div>
       </div>
 
@@ -170,12 +170,24 @@
             </div>
           </div>
 
-          <div class="quick-filters mb-3">
-            <button :class="['chip', studentStatusFilter === 'all' ? 'chip-active' : '']" @click="studentStatusFilter = 'all'; studentTab = 'enrolled'">{{ $t('courses.all') }}</button>
-            <button :class="['chip', studentStatusFilter === 'not-started' ? 'chip-active' : '']" @click="studentStatusFilter = 'not-started'; studentTab = 'enrolled'">{{ $t('myCourses.notStarted') }}</button>
-            <button :class="['chip', studentStatusFilter === 'in-progress' ? 'chip-active' : '']" @click="studentStatusFilter = 'in-progress'; studentTab = 'enrolled'">{{ $t('myCourses.inProgress') }}</button>
-            <button :class="['chip', studentStatusFilter === 'completed' ? 'chip-active' : '']" @click="studentStatusFilter = 'completed'; studentTab = 'enrolled'">{{ $t('myCourses.completed') }}</button>
-            <button :class="['chip', studentTab === 'bookmarked' ? 'chip-active' : '']" @click="studentTab = 'bookmarked'; fetchBookmarks()">{{ $t('myCourses.bookmarked') }}</button>
+          <div class="tab-switcher mb-3">
+            <button
+              class="tab-btn"
+              :class="{ active: studentTab === 'enrolled' }"
+              @click="studentTab = 'enrolled'"
+            >{{ $t('courses.enrolled') }}</button>
+            <button
+              class="tab-btn"
+              :class="{ active: studentTab === 'bookmarked' }"
+              @click="studentTab = 'bookmarked'; fetchBookmarks()"
+            >{{ $t('myCourses.bookmarked') }}</button>
+          </div>
+
+          <div v-if="studentTab === 'enrolled'" class="quick-filters mb-3">
+            <button :class="['chip', studentStatusFilter === 'all' ? 'chip-active' : '']" @click="studentStatusFilter = 'all'">{{ $t('courses.all') }}</button>
+            <button :class="['chip', studentStatusFilter === 'not-started' ? 'chip-active' : '']" @click="studentStatusFilter = 'not-started'">{{ $t('myCourses.notStarted') }}</button>
+            <button :class="['chip', studentStatusFilter === 'in-progress' ? 'chip-active' : '']" @click="studentStatusFilter = 'in-progress'">{{ $t('myCourses.inProgress') }}</button>
+            <button :class="['chip', studentStatusFilter === 'completed' ? 'chip-active' : '']" @click="studentStatusFilter = 'completed'">{{ $t('myCourses.completed') }}</button>
           </div>
 
           <template v-if="studentTab === 'enrolled'">
@@ -189,7 +201,7 @@
                 :key="item.id"
                 class="col-12 col-sm-6 col-lg-4"
               >
-                <div class="my-course-card" @click="$router.push(`/courses/${item.course_id}/learn`)">
+                <div class="my-course-card" @click="$router.push(`/courses/${item.course_id}`)">
                   <div class="my-course-thumbnail">
                     <img :src="item.thumbnail_url || defaultThumbnail" :alt="item.title" />
                     <span v-if="progressPercent(item) === 100" class="completed-badge">{{ $t('myCourses.completedBadge') }}</span>
@@ -260,10 +272,11 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import StarRating from '@/components/courses/StarRating.vue'
 import CourseCardSmall from '@/components/courses/CourseCardSmall.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 
 export default {
   name: 'MyCoursesView',
-  components: { StarRating, CourseCardSmall },
+  components: { StarRating, CourseCardSmall, SkeletonLoader },
   data() {
     return {
       myCourses: [],
@@ -401,11 +414,50 @@ export default {
 </script>
 
 <style scoped>
+  .tab-switcher {
+    display: flex;
+    gap: 0;
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: 8px;
+    overflow: hidden;
+    width: fit-content;
+  }
+
+  .tab-btn {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border: none;
+    background: var(--color-bg);
+    color: var(--color-text-light);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .tab-btn:not(:last-child) {
+    border-right: 1.5px solid var(--color-border-strong);
+  }
+
+  .tab-btn:hover {
+    color: var(--color-primary);
+    background-color: var(--color-bg-light);
+  }
+
+  .tab-btn.active {
+    background-color: var(--color-primary);
+    color: #fff;
+  }
+
   .toolbar {
     display: flex;
     gap: 0.75rem;
     align-items: center;
     flex-wrap: wrap;
+    background-color: var(--color-bg);
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    padding: 0.85rem 1rem;
   }
 
   .toolbar-left {
@@ -435,7 +487,7 @@ export default {
   .search-input {
     width: 100%;
     padding: 0.55rem 0.85rem 0.55rem 2.4rem;
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border-strong);
     border-radius: 8px;
     font-size: 0.9rem;
     background-color: var(--color-bg);
@@ -450,7 +502,7 @@ export default {
 
   .filter-select {
     padding: 0.55rem 2rem 0.55rem 0.85rem;
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border-strong);
     border-radius: 8px;
     font-size: 0.9rem;
     background-color: var(--color-bg);

@@ -4,9 +4,12 @@
       &larr; {{ $t('common.back') }}
     </button>
 
-    <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+    <div v-if="loading" class="row g-5">
+      <div class="col-12 col-lg-8">
+        <SkeletonLoader type="line" :count="4" />
+      </div>
+      <div class="col-12 col-lg-4">
+        <SkeletonLoader type="card" />
       </div>
     </div>
 
@@ -53,7 +56,7 @@
                   {{ lesson.duration }} min
                 </small>
               </div>
-              <span v-if="isEnrolled" class="lesson-play" @click="goToLearn">
+              <span v-if="isEnrolled || isOwner" class="lesson-play" @click="goToLearn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               </span>
             </div>
@@ -63,7 +66,6 @@
             :course-id="course.id"
             :is-enrolled="isEnrolled"
             :is-authenticated="isAuthenticated"
-            @review-changed="fetchCourse"
             class="mt-5"
           />
         </div>
@@ -123,6 +125,14 @@
                 {{ course.user_bookmarked ? $t('bookmarks.bookmarked') : $t('bookmarks.bookmark') }}
               </button>
 
+              <button
+                v-if="isOwner"
+                class="btn btn-primary btn-lg"
+                @click="goToLearn"
+              >
+                {{ $t('courses.viewLessons') }}
+              </button>
+
               <router-link
                 v-if="isOwner"
                 :to="`/courses/${course.id}/edit`"
@@ -143,16 +153,18 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import StarRating from '@/components/courses/StarRating.vue'
 import ReviewSection from '@/components/courses/ReviewSection.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 
 export default {
   name: 'CourseDetailView',
-  components: { StarRating, ReviewSection },
+  components: { StarRating, ReviewSection, SkeletonLoader },
   data() {
     return {
       course: null,
       lessons: [],
       loading: true,
       isEnrolled: false,
+      actionLoading: false,
     }
   },
   computed: {
@@ -174,7 +186,6 @@ export default {
         this.course = data.data.course || data.data
         this.lessons = data.data.lessons || []
         this.isEnrolled = data.data.is_enrolled || false
-        this.saveRecentlyViewed(this.course)
       } catch {
         this.$router.push('/courses')
       } finally {
@@ -182,15 +193,20 @@ export default {
       }
     },
     async toggleLike() {
+      if (this.actionLoading) return
+      this.actionLoading = true
       try {
         const { data } = await api.post(`/courses/${this.course.id}/like`)
         this.course.user_liked = data.data.liked
         this.course.like_count = data.data.like_count
       } catch {
         // ignore
+      } finally {
+        this.actionLoading = false
       }
     },
     handleEnroll() {
+      if (this.actionLoading) return
       if (this.course.price > 0) {
         this.$router.push(`/payment/${this.course.id}`)
       } else {
@@ -198,38 +214,26 @@ export default {
       }
     },
     async enrollFree() {
+      this.actionLoading = true
       try {
         await api.post('/enrollments', { course_id: this.course.id })
         this.isEnrolled = true
       } catch {
         // ignore
+      } finally {
+        this.actionLoading = false
       }
     },
     async toggleBookmark() {
+      if (this.actionLoading) return
+      this.actionLoading = true
       try {
         const { data } = await api.post(`/courses/${this.course.id}/bookmark`)
         this.course.user_bookmarked = data.data.bookmarked
       } catch {
         // ignore
-      }
-    },
-    saveRecentlyViewed(course) {
-      try {
-        const key = 'learnify_recently_viewed'
-        let recent = JSON.parse(localStorage.getItem(key) || '[]')
-        recent = recent.filter((c) => c.id !== course.id)
-        recent.unshift({
-          id: course.id,
-          title: course.title,
-          thumbnail_url: course.thumbnail_url,
-          instructor_name: course.instructor_name,
-          price: course.price,
-          avg_rating: course.avg_rating,
-        })
-        recent = recent.slice(0, 5)
-        localStorage.setItem(key, JSON.stringify(recent))
-      } catch {
-        // ignore
+      } finally {
+        this.actionLoading = false
       }
     },
     goToLearn() {

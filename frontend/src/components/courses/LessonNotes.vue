@@ -6,18 +6,25 @@
         class="form-control mb-2"
         :placeholder="$t('notes.placeholder')"
         rows="2"
+        :disabled="saving"
+        @keydown.enter.exact.prevent="addNote"
       ></textarea>
       <div class="d-flex justify-content-between align-items-center">
         <span class="timestamp-badge" v-if="currentTime > 0">
           {{ $t('notes.atTimestamp') }} {{ formatTime(currentTime) }}
         </span>
-        <button class="btn btn-primary btn-sm" :disabled="!newContent.trim()" @click="addNote">
+        <button class="btn btn-primary btn-sm" :disabled="!newContent.trim() || saving" @click="addNote">
+          <span v-if="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
           {{ $t('notes.addNote') }}
         </button>
       </div>
     </div>
 
-    <div v-if="notes.length === 0" class="text-muted text-center py-3">
+    <div v-if="loadingNotes">
+      <SkeletonLoader type="line" :count="3" />
+    </div>
+
+    <div v-else-if="notes.length === 0" class="text-muted text-center py-3">
       {{ $t('notes.noNotes') }}
     </div>
 
@@ -45,9 +52,11 @@
 
 <script>
 import api from '@/services/api'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 
 export default {
   name: 'LessonNotes',
+  components: { SkeletonLoader },
   props: {
     lessonId: { type: String, required: true },
     currentTime: { type: Number, default: 0 },
@@ -59,6 +68,8 @@ export default {
       newContent: '',
       editingId: null,
       editContent: '',
+      saving: false,
+      loadingNotes: true,
     }
   },
   watch: {
@@ -69,14 +80,19 @@ export default {
   },
   methods: {
     async fetchNotes() {
+      if (this.notes.length === 0) this.loadingNotes = true
       try {
         const { data } = await api.get(`/lessons/${this.lessonId}/notes`)
         this.notes = data.data || []
       } catch {
         this.notes = []
+      } finally {
+        this.loadingNotes = false
       }
     },
     async addNote() {
+      if (!this.newContent.trim() || this.saving) return
+      this.saving = true
       try {
         await api.post(`/lessons/${this.lessonId}/notes`, {
           content: this.newContent.trim(),
@@ -86,6 +102,8 @@ export default {
         await this.fetchNotes()
       } catch {
         // ignore
+      } finally {
+        this.saving = false
       }
     },
     startEdit(note) {

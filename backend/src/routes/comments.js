@@ -18,9 +18,10 @@ function parseMentions(content) {
 router.get('/lessons/:lessonId/comments', optionalAuth, async (req, res, next) => {
   try {
     const { lessonId } = req.params;
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const lim = parseInt(limit);
+    const { page: rawPage = 1, limit: rawLimit = 20 } = req.query;
+    const page = Math.max(1, parseInt(rawPage));
+    const lim = Math.min(100, Math.max(1, parseInt(rawLimit)));
+    const offset = (page - 1) * lim;
 
     const comments = await sql`
       SELECT c.*, u.username, u.avatar_url,
@@ -36,15 +37,18 @@ router.get('/lessons/:lessonId/comments', optionalAuth, async (req, res, next) =
       SELECT COUNT(*)::int AS total FROM comments WHERE lesson_id = ${lessonId} AND parent_id IS NULL
     `;
 
+    const commentIds = comments.map(c => c.id);
+    const allReplies = commentIds.length > 0
+      ? await sql`
+          SELECT c.*, u.username, u.avatar_url
+          FROM comments c
+          JOIN users u ON c.user_id = u.id
+          WHERE c.parent_id = ANY(${commentIds})
+          ORDER BY c.created_at ASC
+        `
+      : [];
     for (const comment of comments) {
-      const replies = await sql`
-        SELECT c.*, u.username, u.avatar_url
-        FROM comments c
-        JOIN users u ON c.user_id = u.id
-        WHERE c.parent_id = ${comment.id}
-        ORDER BY c.created_at ASC
-      `;
-      comment.replies = replies;
+      comment.replies = allReplies.filter(r => r.parent_id === comment.id);
     }
 
     res.json({
@@ -52,7 +56,7 @@ router.get('/lessons/:lessonId/comments', optionalAuth, async (req, res, next) =
       data: {
         comments,
         pagination: {
-          page: parseInt(page),
+          page,
           limit: lim,
           total: countResult[0].total,
           pages: Math.ceil(countResult[0].total / lim),
@@ -74,6 +78,11 @@ router.post('/lessons/:lessonId/comments', authenticate, async (req, res, next) 
       return res.status(400).json({ success: false, error: 'Content is required' });
     }
 
+    const lesson = await sql`SELECT id FROM lessons WHERE id = ${lessonId}`;
+    if (lesson.length === 0) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
     const id = uuidv4();
     const result = await sql`
       INSERT INTO comments (id, user_id, lesson_id, parent_id, content)
@@ -89,32 +98,47 @@ router.post('/lessons/:lessonId/comments', authenticate, async (req, res, next) 
     comment.replies = [];
     comment.reply_count = 0;
 
+    const lessonInfo = await sql`
+      SELECT l.title AS lesson_title, c.title AS course_title, c.id AS course_id
+      FROM lessons l JOIN courses c ON l.course_id = c.id
+      WHERE l.id = ${lessonId}
+    `;
+    const lessonTitle = lessonInfo[0]?.lesson_title || '';
+    const courseTitle = lessonInfo[0]?.course_title || '';
+    const courseId = lessonInfo[0]?.course_id || '';
+
     const mentionedUsernames = parseMentions(content);
-    for (const username of mentionedUsernames) {
-      const mentioned = await sql`SELECT id FROM users WHERE username = ${username}`;
-      if (mentioned.length > 0 && mentioned[0].id !== userId) {
-        await sql`
-          INSERT INTO comment_mentions (comment_id, mentioned_user_id)
-          VALUES (${id}, ${mentioned[0].id})
-          ON CONFLICT DO NOTHING
-        `;
-        const notifId = uuidv4();
-        await sql`
-          INSERT INTO notifications (id, user_id, type, reference_id, reference_type, message)
-          VALUES (${notifId}, ${mentioned[0].id}, 'mention', ${id}, 'comment',
-            ${`${comment.username} mentioned you in a comment`})
-        `;
+    const notifiedUserIds = new Set();
+    if (mentionedUsernames.length > 0) {
+      const mentionedUsers = await sql`
+        SELECT id, username FROM users WHERE username = ANY(${mentionedUsernames})
+      `;
+      for (const mentioned of mentionedUsers) {
+        if (mentioned.id !== userId) {
+          await sql`
+            INSERT INTO comment_mentions (comment_id, mentioned_user_id)
+            VALUES (${id}, ${mentioned.id})
+            ON CONFLICT DO NOTHING
+          `;
+          notifiedUserIds.add(mentioned.id);
+          const notifId = uuidv4();
+          await sql`
+            INSERT INTO notifications (id, user_id, type, reference_id, reference_type, message)
+            VALUES (${notifId}, ${mentioned.id}, 'mention', ${id}, 'comment',
+              ${`${comment.username} mentioned you in ${lessonTitle} — ${courseTitle}|${lessonId}|${courseId}`})
+          `;
+        }
       }
     }
 
     if (parent_id) {
       const parentComment = await sql`SELECT user_id FROM comments WHERE id = ${parent_id}`;
-      if (parentComment.length > 0 && parentComment[0].user_id !== userId) {
+      if (parentComment.length > 0 && parentComment[0].user_id !== userId && !notifiedUserIds.has(parentComment[0].user_id)) {
         const notifId = uuidv4();
         await sql`
           INSERT INTO notifications (id, user_id, type, reference_id, reference_type, message)
           VALUES (${notifId}, ${parentComment[0].user_id}, 'reply', ${id}, 'comment',
-            ${`${comment.username} replied to your comment`})
+            ${`${comment.username} replied to your comment in ${lessonTitle} — ${courseTitle}|${lessonId}|${courseId}`})
         `;
       }
     }
@@ -129,6 +153,10 @@ router.put('/comments/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
+
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ success: false, error: 'Content is required and must be a string' });
+    }
 
     const existing = await sql`SELECT * FROM comments WHERE id = ${id}`;
     if (existing.length === 0) {

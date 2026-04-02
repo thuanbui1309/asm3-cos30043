@@ -84,11 +84,16 @@
           :class="['chip', ownershipFilter === 'enrolled' ? 'chip-active' : '']"
           @click="ownershipFilter = 'enrolled'"
         >{{ $t('courses.enrolledFilter') }}</button>
+        <button
+          v-if="isStudent"
+          :class="['chip', ownershipFilter === 'not-enrolled' ? 'chip-active' : '']"
+          @click="ownershipFilter = 'not-enrolled'"
+        >{{ $t('courses.notEnrolledFilter') }}</button>
       </div>
 
       <div class="results-meta mb-3">
-        <span v-if="!loading" class="results-count">
-          {{ $t('courses.showingRange', { from: Math.min(1, filteredCourses.length), to: visibleCourses.length, total: filteredCourses.length }) }}
+        <span v-if="!loading && pagination.total > 0" class="results-count">
+          {{ $t('courses.showingRange', { from: (pagination.page - 1) * pagination.limit + 1, to: Math.min(pagination.page * pagination.limit, pagination.total), total: pagination.total }) }}
         </span>
         <button
           v-if="search || categoryFilter || difficultyFilter || priceFilter || ownershipFilter !== 'all'"
@@ -97,9 +102,9 @@
         >{{ $t('courses.clearFilters') }}</button>
       </div>
 
-      <div v-if="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+      <div v-if="loading" class="row g-4">
+        <div v-for="n in 6" :key="n" class="col-12 col-sm-6 col-lg-4">
+          <SkeletonLoader type="card" />
         </div>
       </div>
 
@@ -110,7 +115,7 @@
       <template v-else>
         <div class="row g-4">
           <div
-            v-for="course in visibleCourses"
+            v-for="course in filteredCourses"
             :key="course.id"
             class="col-12 col-sm-6 col-lg-4"
           >
@@ -120,12 +125,14 @@
                 <span class="difficulty-badge" :class="`badge-${course.difficulty}`">
                   {{ $t(`courses.${course.difficulty}`) }}
                 </span>
-                <div class="price-badge">
-                  {{ course.price > 0 ? Number(course.price).toLocaleString('vi-VN') + '₫' : $t('courses.free') }}
-                </div>
               </div>
               <div class="course-body">
-                <span class="course-category">{{ $t(`courses.categories.${course.category}`) }}</span>
+                <div class="course-body-top">
+                  <span class="course-category">{{ $t(`courses.categories.${course.category}`) }}</span>
+                  <span class="price-badge">
+                    {{ course.price > 0 ? Number(course.price).toLocaleString('vi-VN') + '₫' : $t('courses.free') }}
+                  </span>
+                </div>
                 <h5 class="course-title">{{ course.title }}</h5>
                 <p class="course-instructor">{{ $t('courses.byInstructor') }} {{ course.instructor_name }}</p>
                 <div class="course-footer">
@@ -138,16 +145,31 @@
                   <span class="meta-sep">·</span>
                   <span class="meta-item">{{ course.enrollment_count || 0 }} {{ $t('courses.students') }}</span>
                 </div>
+                <div v-if="isStudent" class="course-action mt-2">
+                  <router-link
+                    v-if="enrolledCourseIds.includes(course.id)"
+                    :to="`/courses/${course.id}/learn`"
+                    class="btn btn-sm btn-primary w-100"
+                    @click.stop
+                  >{{ $t('courses.enrolled') }}</router-link>
+                  <router-link
+                    v-else
+                    :to="`/courses/${course.id}`"
+                    class="btn btn-sm btn-outline-primary w-100"
+                    @click.stop
+                  >{{ $t('courses.enroll') }}</router-link>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-if="visibleCount < filteredCourses.length" class="text-center mt-4">
-          <button class="btn-load-more" @click="visibleCount += 10">
-            {{ $t('courses.loadMore') }}
-          </button>
-        </div>
+          <PaginationBar
+          :totalItems="pagination.total"
+          :itemsPerPage="pagination.limit"
+          :currentPage="pagination.page"
+          @page-change="onPageChange"
+        />
       </template>
   </div>
 </template>
@@ -156,10 +178,12 @@
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import StarRating from '@/components/courses/StarRating.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
 
 export default {
   name: 'CoursesView',
-  components: { StarRating },
+  components: { StarRating, SkeletonLoader, PaginationBar },
   data() {
     return {
       courses: [],
@@ -171,10 +195,13 @@ export default {
       priceFilter: '',
       sortBy: 'newest',
       ownershipFilter: 'all',
-      visibleCount: 15,
+      pagination: { page: 1, limit: 15, total: 0, pages: 0 },
       categories: ['web-dev', 'data-science', 'mobile-dev', 'design', 'devops', 'other'],
       defaultThumbnail: 'https://placehold.co/400x225/e8e8e8/999?text=Course',
       showAutocomplete: false,
+      autocompleteSuggestions: [],
+      _searchTimer: null,
+      _autocompleteTimer: null,
     }
   },
   computed: {
@@ -182,68 +209,61 @@ export default {
     isInstructor() { return useAuthStore().isInstructor },
     isStudent() { return useAuthStore().isStudent },
     filteredCourses() {
-      let result = this.courses
-      if (this.search) {
-        const q = this.search.toLowerCase()
-        result = result.filter((c) =>
-          c.title.toLowerCase().includes(q) ||
-          c.description?.toLowerCase().includes(q) ||
-          c.instructor_name?.toLowerCase().includes(q)
-        )
-      }
-      if (this.categoryFilter) {
-        result = result.filter((c) => c.category === this.categoryFilter)
-      }
-      if (this.difficultyFilter) {
-        result = result.filter((c) => c.difficulty === this.difficultyFilter)
-      }
-      if (this.priceFilter === 'free') {
-        result = result.filter((c) => Number(c.price) === 0)
-      } else if (this.priceFilter === 'paid') {
-        result = result.filter((c) => Number(c.price) > 0)
-      }
-      if (this.ownershipFilter === 'mine') {
-        const userId = useAuthStore().user?.id
-        result = result.filter((c) => c.instructor_id === userId)
-      } else if (this.ownershipFilter === 'enrolled') {
-        result = result.filter((c) => this.enrolledCourseIds.includes(c.id))
-      }
-      return result
-    },
-    autocompleteSuggestions() {
-      if (!this.search || this.search.length < 2) return []
-      const q = this.search.toLowerCase()
       return this.courses
-        .filter((c) => c.title.toLowerCase().includes(q))
-        .slice(0, 5)
-    },
-    visibleCourses() {
-      return this.filteredCourses.slice(0, this.visibleCount)
     },
   },
   watch: {
-    search() { this.visibleCount = 15 },
-    categoryFilter() { this.visibleCount = 15 },
-    difficultyFilter() { this.visibleCount = 15 },
-    priceFilter() { this.visibleCount = 15 },
-    ownershipFilter() { this.visibleCount = 15 },
-    sortBy() { this.visibleCount = 15; this.fetchCourses() },
+    search() {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = setTimeout(() => {
+        this.pagination.page = 1
+        this.fetchCourses()
+      }, 300)
+      clearTimeout(this._autocompleteTimer)
+      this._autocompleteTimer = setTimeout(() => {
+        this.fetchAutocomplete()
+      }, 200)
+    },
+    categoryFilter() { this.pagination.page = 1; this.fetchCourses() },
+    difficultyFilter() { this.pagination.page = 1; this.fetchCourses() },
+    priceFilter() { this.pagination.page = 1; this.fetchCourses() },
+    ownershipFilter() { this.pagination.page = 1; this.fetchCourses() },
+    sortBy() { this.pagination.page = 1; this.fetchCourses() },
   },
   async created() {
-    await this.fetchCourses()
-    if (this.isStudent) {
-      await this.fetchEnrolledIds()
-    }
+    const promises = [this.fetchCourses()]
+    if (this.isStudent) promises.push(this.fetchEnrolledIds())
+    await Promise.all(promises)
   },
   methods: {
     hideAutocomplete() {
       setTimeout(() => { this.showAutocomplete = false }, 200)
     },
+    onPageChange(page) {
+      this.pagination.page = page
+      this.fetchCourses()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    },
     async fetchCourses() {
       this.loading = true
       try {
-        const { data } = await api.get(`/courses?limit=1000&sort=${this.sortBy}`)
+        const params = {
+          page: this.pagination.page,
+          limit: this.pagination.limit,
+          sort: this.sortBy,
+        }
+        if (this.search) params.q = this.search
+        if (this.categoryFilter) params.category = this.categoryFilter
+        if (this.difficultyFilter) params.difficulty = this.difficultyFilter
+        if (this.priceFilter) params.price = this.priceFilter
+        if (this.ownershipFilter === 'mine') {
+          params.instructor_id = useAuthStore().user?.id
+        } else if (this.ownershipFilter === 'enrolled' || this.ownershipFilter === 'not-enrolled') {
+          params.enrollment = this.ownershipFilter
+        }
+        const { data } = await api.get('/courses', { params })
         this.courses = data.data.courses || []
+        this.pagination = data.data.pagination || this.pagination
       } catch {
         this.courses = []
       } finally {
@@ -256,6 +276,18 @@ export default {
         this.enrolledCourseIds = (data.data || []).map((e) => e.course_id)
       } catch {
         this.enrolledCourseIds = []
+      }
+    },
+    async fetchAutocomplete() {
+      if (!this.search || this.search.length < 2) {
+        this.autocompleteSuggestions = []
+        return
+      }
+      try {
+        const { data } = await api.get('/courses', { params: { q: this.search, limit: 5 } })
+        this.autocompleteSuggestions = data.data.courses || []
+      } catch {
+        this.autocompleteSuggestions = []
       }
     },
   },
@@ -453,23 +485,6 @@ export default {
     text-decoration: underline;
   }
 
-  .btn-load-more {
-    padding: 0.55rem 2rem;
-    border: 1.5px solid var(--color-primary);
-    border-radius: 8px;
-    background: var(--color-bg);
-    color: var(--color-primary);
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
-  }
-
-  .btn-load-more:hover {
-    background-color: var(--color-primary);
-    color: #fff;
-  }
-
   .empty-state {
     text-align: center;
     padding: 4rem 0;
@@ -526,17 +541,18 @@ export default {
   .badge-intermediate { background-color: #fff3cd; color: #856404; }
   .badge-advanced { background-color: #f8d7da; color: #721c24; }
 
+  .course-body-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.3rem;
+  }
+
   .price-badge {
-    position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.55);
-    padding: 0.2rem 0.6rem;
-    border-radius: 6px;
-    backdrop-filter: blur(4px);
+    color: var(--color-primary);
+    white-space: nowrap;
   }
 
   .course-body {
@@ -552,7 +568,6 @@ export default {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 0.3rem;
   }
 
   .course-title {

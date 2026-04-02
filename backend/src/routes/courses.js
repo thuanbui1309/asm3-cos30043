@@ -7,12 +7,17 @@ const router = express.Router();
 
 router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    const { q, category, difficulty, page = 1, limit = 10, sort = 'newest' } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const lim = parseInt(limit);
+    const { q, category, difficulty, price, enrollment: rawEnrollment, instructor_id, page: rawPage = 1, limit: rawLimit = 10, sort = 'newest' } = req.query;
+    const enrollment = rawEnrollment || null;
+    const page = Math.max(1, parseInt(rawPage));
+    const lim = Math.min(100, Math.max(1, parseInt(rawLimit)));
+    const offset = (page - 1) * lim;
     const search = q ? `%${q}%` : null;
     const cat = category || null;
     const diff = difficulty || null;
+    const isFree = price === 'free' ? true : price === 'paid' ? false : null;
+    const instId = instructor_id || null;
+    const userId = req.user?.id || null;
 
     const orderClauses = {
       newest: sql`c.created_at DESC`,
@@ -35,6 +40,11 @@ router.get('/', optionalAuth, async (req, res, next) => {
       WHERE (${search}::text IS NULL OR c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
         AND (${cat}::text IS NULL OR c.category = ${cat})
         AND (${diff}::text IS NULL OR c.difficulty = ${diff})
+        AND (${isFree}::boolean IS NULL OR (${isFree} = true AND c.price = 0) OR (${isFree} = false AND c.price > 0))
+        AND (${instId}::uuid IS NULL OR c.instructor_id = ${instId})
+        AND (${enrollment}::text IS NULL
+          OR (${enrollment} = 'enrolled' AND EXISTS (SELECT 1 FROM enrollments e WHERE e.course_id = c.id AND e.user_id = ${userId}))
+          OR (${enrollment} = 'not-enrolled' AND NOT EXISTS (SELECT 1 FROM enrollments e WHERE e.course_id = c.id AND e.user_id = ${userId})))
       ORDER BY ${orderBy}
       LIMIT ${lim} OFFSET ${offset}
     `;
@@ -44,6 +54,11 @@ router.get('/', optionalAuth, async (req, res, next) => {
       WHERE (${search}::text IS NULL OR c.title ILIKE ${search} OR c.description ILIKE ${search} OR c.category ILIKE ${search})
         AND (${cat}::text IS NULL OR c.category = ${cat})
         AND (${diff}::text IS NULL OR c.difficulty = ${diff})
+        AND (${isFree}::boolean IS NULL OR (${isFree} = true AND c.price = 0) OR (${isFree} = false AND c.price > 0))
+        AND (${instId}::uuid IS NULL OR c.instructor_id = ${instId})
+        AND (${enrollment}::text IS NULL
+          OR (${enrollment} = 'enrolled' AND EXISTS (SELECT 1 FROM enrollments e WHERE e.course_id = c.id AND e.user_id = ${userId}))
+          OR (${enrollment} = 'not-enrolled' AND NOT EXISTS (SELECT 1 FROM enrollments e WHERE e.course_id = c.id AND e.user_id = ${userId})))
     `;
     const total = parseInt(countResult[0].count);
 
@@ -52,80 +67,13 @@ router.get('/', optionalAuth, async (req, res, next) => {
       data: {
         courses,
         pagination: {
-          page: parseInt(page),
+          page,
           limit: lim,
           total,
           pages: Math.ceil(total / lim),
         },
       },
     });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/featured', optionalAuth, async (req, res, next) => {
-  try {
-    const popular = await sql`
-      SELECT c.*, u.username AS instructor_name,
-        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
-        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
-        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count,
-        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
-      FROM courses c JOIN users u ON c.instructor_id = u.id
-      ORDER BY enrollment_count DESC LIMIT 4
-    `;
-    const topRated = await sql`
-      SELECT c.*, u.username AS instructor_name,
-        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
-        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
-        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count,
-        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
-      FROM courses c JOIN users u ON c.instructor_id = u.id
-      ORDER BY avg_rating DESC, review_count DESC LIMIT 4
-    `;
-    const newest = await sql`
-      SELECT c.*, u.username AS instructor_name,
-        (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id)::int AS enrollment_count,
-        COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = c.id), 0) AS avg_rating,
-        (SELECT COUNT(*) FROM reviews WHERE course_id = c.id)::int AS review_count,
-        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count
-      FROM courses c JOIN users u ON c.instructor_id = u.id
-      ORDER BY c.created_at DESC LIMIT 4
-    `;
-    res.json({ success: true, data: { popular, top_rated: topRated, newest } });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/continue', authenticate, async (req, res, next) => {
-  try {
-    const result = await sql`
-      SELECT c.*, u.username AS instructor_name, e.progress,
-        (SELECT COUNT(*) FROM lessons WHERE course_id = c.id)::int AS lesson_count,
-        (SELECT COALESCE(json_agg(id ORDER BY order_index), '[]'::json) FROM lessons WHERE course_id = c.id) AS lesson_ids
-      FROM enrollments e
-      JOIN courses c ON e.course_id = c.id
-      JOIN users u ON c.instructor_id = u.id
-      WHERE e.user_id = ${req.user.id}
-      ORDER BY e.purchased_at DESC LIMIT 4
-    `;
-    res.json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/stats', async (req, res, next) => {
-  try {
-    const result = await sql`
-      SELECT
-        (SELECT COUNT(*) FROM courses)::int AS course_count,
-        (SELECT COUNT(*) FROM users WHERE role = 'student')::int AS student_count,
-        (SELECT COUNT(*) FROM users WHERE role = 'instructor')::int AS instructor_count
-    `;
-    res.json({ success: true, data: result[0] });
   } catch (error) {
     next(error);
   }
@@ -187,17 +135,13 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
     let isEnrolled = false;
     let userBookmarked = false;
     if (req.user) {
-      const likeResult = await sql`
-        SELECT 1 FROM likes WHERE user_id = ${req.user.id} AND course_id = ${id}
-      `;
+      const [likeResult, enrollResult, bookmarkResult] = await Promise.all([
+        sql`SELECT 1 FROM likes WHERE user_id = ${req.user.id} AND course_id = ${id}`,
+        sql`SELECT 1 FROM enrollments WHERE user_id = ${req.user.id} AND course_id = ${id}`,
+        sql`SELECT 1 FROM bookmarks WHERE user_id = ${req.user.id} AND course_id = ${id}`,
+      ]);
       userLiked = likeResult.length > 0;
-      const enrollResult = await sql`
-        SELECT 1 FROM enrollments WHERE user_id = ${req.user.id} AND course_id = ${id}
-      `;
       isEnrolled = enrollResult.length > 0;
-      const bookmarkResult = await sql`
-        SELECT 1 FROM bookmarks WHERE user_id = ${req.user.id} AND course_id = ${id}
-      `;
       userBookmarked = bookmarkResult.length > 0;
     }
 
@@ -286,6 +230,19 @@ router.delete('/:id', authenticate, async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this course' });
     }
 
+    const lessonIds = await sql`SELECT id FROM lessons WHERE course_id = ${id}`;
+    const lids = lessonIds.map(l => l.id);
+    if (lids.length > 0) {
+      const commentIds = await sql`SELECT id FROM comments WHERE lesson_id = ANY(${lids})`;
+      const cids = commentIds.map(c => c.id);
+      if (cids.length > 0) {
+        await sql`DELETE FROM comment_mentions WHERE comment_id = ANY(${cids})`;
+      }
+      await sql`DELETE FROM comments WHERE lesson_id = ANY(${lids})`;
+      await sql`DELETE FROM notes WHERE lesson_id = ANY(${lids})`;
+    }
+    await sql`DELETE FROM reviews WHERE course_id = ${id}`;
+    await sql`DELETE FROM bookmarks WHERE course_id = ${id}`;
     await sql`DELETE FROM likes WHERE course_id = ${id}`;
     await sql`DELETE FROM lessons WHERE course_id = ${id}`;
     await sql`DELETE FROM enrollments WHERE course_id = ${id}`;

@@ -30,6 +30,11 @@ router.post('/courses/:courseId/bookmark', authenticate, async (req, res, next) 
     const { courseId } = req.params;
     const userId = req.user.id;
 
+    const course = await sql`SELECT id FROM courses WHERE id = ${courseId}`;
+    if (course.length === 0) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
     const existing = await sql`
       SELECT 1 FROM bookmarks WHERE user_id = ${userId} AND course_id = ${courseId}
     `;

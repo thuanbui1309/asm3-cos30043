@@ -65,7 +65,7 @@ export default {
     },
   },
   created() {
-    if (this.cloudinaryId) {
+    if (this.cloudinaryId && import.meta.env.VITE_CLOUDINARY_CLOUD_NAME) {
       const base = `https://res.cloudinary.com/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/video/upload`
       this.qualities = [
         { label: '360p', url: `${base}/q_auto,h_360/${this.cloudinaryId}` },
@@ -83,6 +83,7 @@ export default {
   methods: {
     togglePlay() {
       const video = this.$refs.video
+      if (!video) return
       if (video.paused) {
         video.play()
         this.playing = true
@@ -93,23 +94,27 @@ export default {
     },
     onTimeUpdate() {
       const video = this.$refs.video
+      if (!video) return
       this.currentTime = video.currentTime
       this.progress = (video.currentTime / video.duration) * 100
       this.$emit('timeupdate', video.currentTime)
     },
     onLoaded() {
+      if (!this.$refs.video) return
       this.duration = this.$refs.video.duration
     },
     seek(e) {
+      if (!this.$refs.video) return
       const rect = e.currentTarget.getBoundingClientRect()
       const pct = (e.clientX - rect.left) / rect.width
       this.$refs.video.currentTime = pct * this.duration
     },
     changeSpeed() {
+      if (!this.$refs.video) return
       this.$refs.video.playbackRate = this.playbackRate
     },
     changeQuality() {
-      const time = this.$refs.video.currentTime
+      const time = this.$refs.video?.currentTime
       const wasPlaying = this.playing
       this.$nextTick(() => {
         this.$refs.video.currentTime = time
@@ -125,6 +130,8 @@ export default {
       }
     },
     handleKeydown(e) {
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
       const video = this.$refs.video
       if (!video) return
       if (e.code === 'Space') { e.preventDefault(); this.togglePlay() }
@@ -132,6 +139,7 @@ export default {
       if (e.code === 'ArrowLeft') { video.currentTime -= 10 }
     },
     seekTo(seconds) {
+      if (!this.$refs.video) return
       this.$refs.video.currentTime = seconds
     },
     formatTime(seconds) {

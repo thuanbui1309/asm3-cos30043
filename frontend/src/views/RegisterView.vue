@@ -18,12 +18,13 @@
                 v-model="form.username"
                 type="text"
                 class="form-control"
-                :class="{ 'is-invalid': submitted && !form.username }"
+                :class="{ 'is-invalid': errors.username }"
                 :placeholder="$t('auth.usernamePlaceholder')"
                 autocomplete="username"
                 required
+                @blur="validateField('username')"
               />
-              <div class="invalid-feedback">{{ $t('auth.usernameRequired') }}</div>
+              <small v-if="errors.username" class="text-danger error-text">{{ errors.username }}</small>
             </div>
 
             <div class="mb-3">
@@ -33,12 +34,13 @@
                 v-model="form.email"
                 type="email"
                 class="form-control"
-                :class="{ 'is-invalid': submitted && !form.email }"
+                :class="{ 'is-invalid': errors.email }"
                 :placeholder="$t('auth.emailPlaceholder')"
                 autocomplete="email"
                 required
+                @blur="validateField('email')"
               />
-              <div class="invalid-feedback">{{ $t('auth.emailRequired') }}</div>
+              <small v-if="errors.email" class="text-danger error-text">{{ errors.email }}</small>
             </div>
 
             <div class="mb-3">
@@ -48,12 +50,13 @@
                 v-model="form.password"
                 type="password"
                 class="form-control"
-                :class="{ 'is-invalid': submitted && passwordError }"
+                :class="{ 'is-invalid': errors.password }"
                 :placeholder="$t('auth.passwordPlaceholder')"
                 autocomplete="new-password"
                 required
+                @blur="validateField('password')"
               />
-              <div class="invalid-feedback">{{ passwordError }}</div>
+              <small v-if="errors.password" class="text-danger error-text">{{ errors.password }}</small>
             </div>
 
             <div class="mb-3">
@@ -63,12 +66,13 @@
                 v-model="form.confirmPassword"
                 type="password"
                 class="form-control"
-                :class="{ 'is-invalid': submitted && confirmError }"
+                :class="{ 'is-invalid': errors.confirmPassword }"
                 :placeholder="$t('auth.confirmPasswordPlaceholder')"
                 autocomplete="new-password"
                 required
+                @blur="validateField('confirmPassword')"
               />
-              <div class="invalid-feedback">{{ confirmError }}</div>
+              <small v-if="errors.confirmPassword" class="text-danger error-text">{{ errors.confirmPassword }}</small>
             </div>
 
             <div class="mb-4">
@@ -78,7 +82,7 @@
                   type="button"
                   class="role-option"
                   :class="{ active: form.role === 'student' }"
-                  @click="form.role = 'student'"
+                  @click="form.role = 'student'; validateField('role')"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                   <span>{{ $t('auth.student') }}</span>
@@ -87,15 +91,16 @@
                   type="button"
                   class="role-option"
                   :class="{ active: form.role === 'instructor' }"
-                  @click="form.role = 'instructor'"
+                  @click="form.role = 'instructor'; validateField('role')"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   <span>{{ $t('auth.instructor') }}</span>
                 </button>
               </div>
+              <small v-if="errors.role" class="text-danger error-text">{{ errors.role }}</small>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100" :disabled="loading">
+            <button type="submit" class="btn btn-primary w-100" :disabled="loading || hasErrors">
               <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
               {{ $t('auth.register') }}
             </button>
@@ -125,6 +130,7 @@ export default {
         confirmPassword: '',
         role: 'student',
       },
+      errors: {},
       submitted: false,
     }
   },
@@ -134,21 +140,46 @@ export default {
   computed: {
     loading() { return useAuthStore().loading },
     error() { return useAuthStore().error },
-    passwordError() {
-      if (!this.form.password) return this.$t('auth.passwordRequired')
-      if (this.form.password.length < 6) return this.$t('auth.passwordMin')
-      return null
-    },
-    confirmError() {
-      if (!this.form.confirmPassword) return this.$t('auth.confirmRequired')
-      if (this.form.password !== this.form.confirmPassword) return this.$t('auth.passwordMismatch')
-      return null
+    hasErrors() {
+      return this.submitted && Object.values(this.errors).some(Boolean)
     },
   },
   methods: {
+    validateField(field) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const val = this.form[field]
+      let err = ''
+
+      if (field === 'username') {
+        if (!val) err = this.$t('validation.required')
+        else if (val.length < 3) err = this.$t('validation.usernameMin')
+      } else if (field === 'email') {
+        if (!val) err = this.$t('validation.required')
+        else if (!emailRegex.test(val)) err = this.$t('validation.emailInvalid')
+      } else if (field === 'password') {
+        if (!val) err = this.$t('validation.required')
+        else if (val.length < 8) err = this.$t('validation.passwordMin')
+        else if (!/[A-Z]/.test(val)) err = this.$t('validation.passwordUppercase')
+        else if (!/\d/.test(val)) err = this.$t('validation.passwordNumber')
+        if (this.form.confirmPassword) this.validateField('confirmPassword')
+      } else if (field === 'confirmPassword') {
+        if (!val) err = this.$t('validation.required')
+        else if (val !== this.form.password) err = this.$t('validation.passwordMatch')
+      } else if (field === 'role') {
+        if (!val) err = this.$t('validation.required')
+      }
+
+      this.errors = { ...this.errors, [field]: err }
+    },
+    validateAll() {
+      for (const field of ['username', 'email', 'password', 'confirmPassword', 'role']) {
+        this.validateField(field)
+      }
+      return !Object.values(this.errors).some(Boolean)
+    },
     async handleRegister() {
       this.submitted = true
-      if (!this.form.username || !this.form.email || this.passwordError || this.confirmError) return
+      if (!this.validateAll()) return
 
       try {
         await useAuthStore().register({
@@ -241,5 +272,11 @@ export default {
     margin-bottom: 0;
     font-size: 0.9rem;
     color: var(--color-text-light);
+  }
+
+  .error-text {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: block;
   }
 </style>

@@ -23,10 +23,15 @@ export const vMentionHighlight = {
   },
 }
 
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function applyMentionHighlight(el) {
   const text = el.textContent
   if (!text.includes('@[')) return
-  el.innerHTML = text.replace(/@\[([^\]]+)\]/g, '<span style="color: var(--color-primary); font-weight: 600;">@$1</span>')
+  const escaped = escapeHtml(text)
+  el.innerHTML = escaped.replace(/@\[([^\]]+)\]/g, '<span style="color: var(--color-primary); font-weight: 600;">@$1</span>')
 }
 
 export const vTooltip = {

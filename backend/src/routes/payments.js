@@ -4,6 +4,9 @@ const { v4: uuidv4 } = require('uuid');
 const { sql } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
+const TRANSACTION_PREFIX = 'SEVQR';
+const INBOUND_TRANSFER_TYPE = 'in';
+
 const router = express.Router();
 
 router.get('/qr-proxy', (req, res) => {
@@ -41,7 +44,7 @@ router.post('/create', authenticate, async (req, res, next) => {
     }
 
     const id = uuidv4();
-    const transactionId = `SEVQR TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const transactionId = `${TRANSACTION_PREFIX} TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const amount = course[0].price;
 
     const result = await sql`
@@ -97,12 +100,6 @@ router.get('/:id/status', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/webhook-logs', authenticate, async (req, res) => {
-  if (req.user.role !== 'instructor') return res.status(403).end();
-  const logs = await sql`SELECT * FROM webhook_logs ORDER BY created_at DESC LIMIT 20`;
-  res.json({ success: true, data: logs });
-});
-
 router.post('/webhook', async (req, res, next) => {
   try {
     await sql`
@@ -118,26 +115,30 @@ router.post('/webhook', async (req, res, next) => {
       VALUES (${JSON.stringify(req.headers)}::jsonb, ${JSON.stringify(req.body)}::jsonb)
     `;
     const authHeader = req.headers['authorization'] || '';
-    const apiKey = authHeader.replace(/^(Bearer|Apikey)\s+/i, '') || req.body.api_key;
+    const match = authHeader.match(/^(?:Bearer|Apikey)\s+(.+)$/i);
+    const apiKey = (match && match[1]) || req.body.api_key;
 
     if (!apiKey || apiKey !== process.env.SEPAY_API_KEY) {
       return res.status(401).json({ success: false, error: 'Invalid API key' });
     }
 
-    if (req.body.transferType !== 'in') {
+    if (req.body.transferType !== INBOUND_TRANSFER_TYPE) {
       return res.json({ success: true, data: { message: 'Ignored' } });
     }
 
     const content = req.body.content || '';
-    const match = content.match(/TXN[\s\-]?(\d{13,})[\s\-]?([a-z0-9]{4,})/i);
-    if (!match) {
+    if (!content.includes('TXN')) {
       return res.json({ success: true, data: { message: 'Ignored: no transaction ID' } });
     }
-    const transactionId = `SEVQR TXN-${match[1]}-${match[2]}`;
 
-    const payment = await sql`
-      SELECT * FROM payments WHERE transaction_id = ${transactionId} AND status = 'pending'
-    `;
+    const contentClean = content.replace(/[\s\-]/g, '').toUpperCase();
+
+    const pendingPayments = await sql`SELECT * FROM payments WHERE status = 'pending'`;
+    const payment = pendingPayments.filter((p) => {
+      const cleanTxn = p.transaction_id.replace(/[\s\-]/g, '').toUpperCase();
+      return contentClean.includes(cleanTxn);
+    });
+
     if (payment.length === 0) {
       return res.json({ success: true, data: { message: 'Ignored: no matching payment' } });
     }
@@ -148,7 +149,14 @@ router.post('/webhook', async (req, res, next) => {
       return res.json({ success: true, data: { message: 'Ignored: insufficient amount' } });
     }
 
-    await sql`UPDATE payments SET status = 'completed' WHERE id = ${paymentData.id}`;
+    const updated = await sql`
+      UPDATE payments SET status = 'completed'
+      WHERE id = ${paymentData.id} AND status = 'pending'
+      RETURNING *
+    `;
+    if (updated.length === 0) {
+      return res.json({ success: true, data: { message: 'Ignored: already processed' } });
+    }
 
     const existingEnrollment = await sql`
       SELECT id FROM enrollments

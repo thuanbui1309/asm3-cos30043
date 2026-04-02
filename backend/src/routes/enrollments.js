@@ -7,6 +7,9 @@ const router = express.Router();
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
+    const { course_id } = req.query;
+    const cid = course_id || null;
+
     const result = await sql`
       SELECT e.*, c.title, c.description, c.category, c.difficulty,
         c.thumbnail_url, c.price, u.username AS instructor_name,
@@ -16,6 +19,7 @@ router.get('/', authenticate, async (req, res, next) => {
       JOIN courses c ON e.course_id = c.id
       JOIN users u ON c.instructor_id = u.id
       WHERE e.user_id = ${req.user.id}
+        AND (${cid}::text IS NULL OR e.course_id = ${cid})
       ORDER BY e.purchased_at DESC
     `;
 
@@ -69,6 +73,10 @@ router.put('/:id/progress', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
     const { progress } = req.body;
+
+    if (!progress || typeof progress !== 'object' || Array.isArray(progress)) {
+      return res.status(400).json({ success: false, error: 'Progress must be a JSON object' });
+    }
 
     const enrollment = await sql`
       SELECT user_id FROM enrollments WHERE id = ${id}

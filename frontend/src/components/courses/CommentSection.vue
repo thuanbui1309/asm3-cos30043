@@ -1,28 +1,34 @@
 <template>
   <div class="comment-section">
-    <div v-if="realtimeEnabled" class="realtime-bar mb-3">
-      <span class="realtime-dot"></span>
-      <span class="realtime-text">Live</span>
-      <span v-if="onlineUsers > 0" class="realtime-users">{{ onlineUsers }} viewing</span>
-    </div>
-
     <div v-if="isAuthenticated" class="comment-form mb-3">
       <MentionInput
         v-model="newComment"
         :placeholder="$t('comments.writeComment')"
         :rows="2"
+        :course-id="courseId"
+        :disabled="submitting"
+        @submit="postComment()"
       />
       <button class="btn btn-primary btn-sm mt-2" :disabled="!newComment.trim() || submitting" @click="postComment()">
-        {{ $t('comments.submit') }}
+        <span v-if="submitting && !submittingReplyTo" class="spinner-border spinner-border-sm me-1" role="status"></span>
+        {{ (submitting && !submittingReplyTo) ? $t('comments.posting') : $t('comments.submit') }}
       </button>
     </div>
 
-    <div v-if="comments.length === 0 && !loading" class="text-muted text-center py-3">
+    <div v-if="commentNotFound" class="comment-not-found mb-3">
+      {{ $t('comments.commentDeleted') }}
+    </div>
+
+    <div v-if="loading">
+      <SkeletonLoader type="comment" :count="3" />
+    </div>
+
+    <div v-else-if="comments.length === 0" class="text-muted text-center py-3">
       {{ $t('comments.noComments') }}
     </div>
 
     <TransitionGroup name="comment-anim" tag="div">
-    <div v-for="comment in comments" :key="comment.id" class="comment-item">
+    <div v-for="comment in comments" :key="comment.id" :id="`comment-${comment.id}`" class="comment-item" :class="{ 'comment-highlight': comment.id === scrollToComment, 'new-realtime': isNewComment(comment.id) }" @animationend="clearNewFlag(comment.id)"  >
       <div class="comment-top">
         <div class="comment-avatar">{{ (comment.username || '?').slice(0, 2).toUpperCase() }}</div>
         <div class="comment-body">
@@ -32,14 +38,14 @@
           </div>
           <div v-if="editingId !== comment.id" class="comment-text" v-mention-highlight>{{ comment.content }}</div>
           <div v-else>
-            <MentionInput v-model="editContent" :rows="2" />
+            <MentionInput v-model="editContent" :rows="2" :course-id="courseId" @submit="updateComment(comment.id)" />
             <div class="d-flex gap-2 mt-1">
               <button class="btn btn-primary btn-sm" @click="updateComment(comment.id)">{{ $t('common.save') }}</button>
               <button class="btn btn-outline-secondary btn-sm" @click="editingId = null">{{ $t('common.cancel') }}</button>
             </div>
           </div>
           <div class="comment-actions" v-if="editingId !== comment.id">
-            <button v-if="isAuthenticated" class="btn-text" @click="startReply(comment.id)">{{ $t('comments.reply') }}</button>
+            <button v-if="isAuthenticated" class="btn-text" @click="startReply(comment)">{{ $t('comments.reply') }}</button>
             <button v-if="comment.user_id === currentUserId" class="btn-text" @click="startEdit(comment)">{{ $t('common.edit') }}</button>
             <button v-if="comment.user_id === currentUserId" class="btn-text text-danger" @click="deleteComment(comment.id)">{{ $t('common.delete') }}</button>
           </div>
@@ -47,7 +53,19 @@
       </div>
 
       <div v-if="comment.replies && comment.replies.length > 0" class="replies">
-        <div v-for="reply in comment.replies" :key="reply.id" class="comment-item reply-item">
+        <button
+          v-if="comment.replies.length > 2 && !expandedThreads[comment.id]"
+          class="btn-text show-more-btn"
+          @click="expandedThreads[comment.id] = true"
+        >{{ $t('comments.showReplies', { count: comment.replies.length }) }}</button>
+        <div
+          v-for="(reply, ri) in visibleReplies(comment)"
+          :key="reply.id"
+          :id="`comment-${reply.id}`"
+          class="comment-item reply-item"
+          :class="{ 'comment-highlight': reply.id === scrollToComment, 'new-realtime': isNewComment(reply.id) }"
+          @animationend="clearNewFlag(reply.id)"
+        >
           <div class="comment-top">
             <div class="comment-avatar sm">{{ (reply.username || '?').slice(0, 2).toUpperCase() }}</div>
             <div class="comment-body">
@@ -55,8 +73,16 @@
                 <strong>{{ reply.username }}</strong>
                 <span class="comment-date">{{ formatDate(reply.created_at) }}</span>
               </div>
-              <div class="comment-text" v-mention-highlight>{{ reply.content }}</div>
-              <div class="comment-actions">
+              <div v-if="editingId !== reply.id" class="comment-text" v-mention-highlight>{{ reply.content }}</div>
+              <div v-else>
+                <MentionInput v-model="editContent" :rows="2" :course-id="courseId" @submit="updateComment(reply.id)" />
+                <div class="d-flex gap-2 mt-1">
+                  <button class="btn btn-primary btn-sm" @click="updateComment(reply.id)">{{ $t('common.save') }}</button>
+                  <button class="btn btn-outline-secondary btn-sm" @click="editingId = null">{{ $t('common.cancel') }}</button>
+                </div>
+              </div>
+              <div class="comment-actions" v-if="editingId !== reply.id">
+                <button v-if="isAuthenticated" class="btn-text" @click="startReplyToThread(comment.id, reply)">{{ $t('comments.reply') }}</button>
                 <button v-if="reply.user_id === currentUserId" class="btn-text" @click="startEdit(reply)">{{ $t('common.edit') }}</button>
                 <button v-if="reply.user_id === currentUserId" class="btn-text text-danger" @click="deleteComment(reply.id)">{{ $t('common.delete') }}</button>
               </div>
@@ -66,9 +92,12 @@
       </div>
 
       <div v-if="replyingTo === comment.id" class="reply-form">
-        <MentionInput v-model="replyContent" :placeholder="$t('comments.writeComment')" :rows="2" />
+        <MentionInput v-model="replyContent" :placeholder="$t('comments.writeComment')" :rows="2" :course-id="courseId" :disabled="submitting" @submit="postComment(comment.id)" />
         <div class="d-flex gap-2 mt-1">
-          <button class="btn btn-primary btn-sm" :disabled="!replyContent.trim()" @click="postComment(comment.id)">{{ $t('comments.submit') }}</button>
+          <button class="btn btn-primary btn-sm" :disabled="!replyContent.trim() || submitting" @click="postComment(comment.id)">
+            <span v-if="submittingReplyTo === comment.id" class="spinner-border spinner-border-sm me-1" role="status"></span>
+            {{ submittingReplyTo === comment.id ? $t('comments.posting') : $t('comments.submit') }}
+          </button>
           <button class="btn btn-outline-secondary btn-sm" @click="replyingTo = null">{{ $t('common.cancel') }}</button>
         </div>
       </div>
@@ -84,6 +113,7 @@
 
 <script>
 import MentionInput from '@/components/common/MentionInput.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useRealtimeComments } from '@/composables/useRealtimeComments'
@@ -91,18 +121,22 @@ import { ref, toRef } from 'vue'
 
 export default {
   name: 'CommentSection',
-  components: { MentionInput },
+  components: { MentionInput, SkeletonLoader },
   props: {
     lessonId: { type: String, required: true },
+    courseId: { type: String, default: '' },
+    instructorId: { type: String, default: '' },
+    instructorName: { type: String, default: '' },
+    scrollToComment: { type: String, default: '' },
   },
   setup(props) {
     const lessonIdRef = toRef(props, 'lessonId')
     const fetchRef = ref(null)
-    const { realtimeEnabled, onlineUsers, isNewComment, clearNewFlag } = useRealtimeComments(
+    const { realtimeEnabled, isNewComment, clearNewFlag } = useRealtimeComments(
       lessonIdRef,
       () => { if (fetchRef.value) fetchRef.value() }
     )
-    return { realtimeEnabled, onlineUsers, isNewComment, clearNewFlag, fetchRef }
+    return { realtimeEnabled, isNewComment, clearNewFlag, fetchRef }
   },
   data() {
     return {
@@ -114,6 +148,9 @@ export default {
       editingId: null,
       editContent: '',
       submitting: false,
+      submittingReplyTo: null,
+      commentNotFound: false,
+      expandedThreads: {},
       loading: false,
     }
   },
@@ -127,10 +164,20 @@ export default {
   async created() {
     this.fetchRef = () => this.fetchComments()
     await this.fetchComments()
+    if (this.scrollToComment) {
+      this.$nextTick(() => {
+        const el = document.getElementById(`comment-${this.scrollToComment}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        } else {
+          this.commentNotFound = true
+        }
+      })
+    }
   },
   methods: {
     async fetchComments(page = 1) {
-      this.loading = true
+      if (this.comments.length === 0) this.loading = true
       try {
         const { data } = await api.get(`/lessons/${this.lessonId}/comments?page=${page}`)
         if (page === 1) {
@@ -146,8 +193,10 @@ export default {
       }
     },
     async postComment(parentId = null) {
-      this.submitting = true
       const content = parentId ? this.replyContent : this.newComment
+      if (!content.trim() || this.submitting) return
+      this.submitting = true
+      this.submittingReplyTo = parentId
       try {
         await api.post(`/lessons/${this.lessonId}/comments`, {
           content,
@@ -164,31 +213,57 @@ export default {
         // ignore
       } finally {
         this.submitting = false
+        this.submittingReplyTo = null
       }
     },
-    startReply(commentId) {
-      this.replyingTo = commentId
-      this.replyContent = ''
+    visibleReplies(comment) {
+      if (!comment.replies) return []
+      if (comment.replies.length <= 2 || this.expandedThreads[comment.id]) return comment.replies
+      return comment.replies.slice(-2)
+    },
+    startReplyToThread(parentCommentId, reply) {
+      this.replyingTo = parentCommentId
+      if (reply.user_id !== this.currentUserId) {
+        this.replyContent = `@[${reply.username}] `
+      } else {
+        this.replyContent = ''
+      }
+    },
+    startReply(comment) {
+      this.replyingTo = comment.id
+      if (comment.user_id !== this.currentUserId) {
+        this.replyContent = `@[${comment.username}] `
+      } else {
+        this.replyContent = ''
+      }
     },
     startEdit(comment) {
       this.editingId = comment.id
       this.editContent = comment.content
     },
     async updateComment(id) {
+      if (this.submitting) return
+      this.submitting = true
       try {
         await api.put(`/comments/${id}`, { content: this.editContent })
         this.editingId = null
         await this.fetchComments()
       } catch {
         // ignore
+      } finally {
+        this.submitting = false
       }
     },
     async deleteComment(id) {
+      if (this.submitting) return
+      this.submitting = true
       try {
         await api.delete(`/comments/${id}`)
         await this.fetchComments()
       } catch {
         // ignore
+      } finally {
+        this.submitting = false
       }
     },
     loadMore() {
@@ -303,39 +378,48 @@ export default {
     padding: 0.5rem 0;
   }
 
+  .show-more-btn {
+    font-size: 0.8rem;
+    color: var(--color-primary);
+    padding: 0.4rem 0;
+    display: block;
+  }
+
   .reply-form {
     margin-left: 2.5rem;
     margin-top: 0.5rem;
   }
 
-  .realtime-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.78rem;
+  .comment-not-found {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
     color: var(--color-text-muted);
+    background-color: var(--color-bg-light);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    text-align: center;
   }
 
-  .realtime-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #28a745;
-    animation: pulse-dot 2s infinite;
+  .comment-highlight {
+    background-color: rgba(4, 102, 200, 0.08);
+    border-left: 3px solid var(--color-primary);
+    animation: highlight-fade 3s ease forwards;
   }
 
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+  @keyframes highlight-fade {
+    0%, 70% { background-color: rgba(4, 102, 200, 0.08); }
+    100% { background-color: transparent; }
   }
 
-  .realtime-text {
-    font-weight: 600;
-    color: #28a745;
+  .new-realtime {
+    border-left: 3px solid #28a745;
+    background-color: rgba(40, 167, 69, 0.08);
+    animation: realtime-fade 3s ease forwards;
   }
 
-  .realtime-users {
-    color: var(--color-text-muted);
+  @keyframes realtime-fade {
+    0%, 60% { background-color: rgba(40, 167, 69, 0.08); }
+    100% { background-color: transparent; border-left-color: transparent; }
   }
 
   .comment-anim-enter-active {

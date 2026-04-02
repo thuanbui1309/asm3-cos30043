@@ -31,7 +31,7 @@
         </div>
 
         <div class="learn-tab-content">
-          <div v-if="activeTab === 'about'" class="learn-tab-pane">
+          <div v-show="activeTab === 'about'" class="learn-tab-pane">
             <div v-if="currentLesson?.description">
               <p>{{ currentLesson.description }}</p>
             </div>
@@ -40,7 +40,7 @@
               <p v-if="course?.description" class="text-muted">{{ course.description }}</p>
             </div>
           </div>
-          <div v-if="activeTab === 'notes'" class="learn-tab-pane">
+          <div v-show="activeTab === 'notes'" class="learn-tab-pane">
             <LessonNotes
               v-if="currentLesson"
               :lesson-id="currentLesson.id"
@@ -48,10 +48,14 @@
               @seek="seekVideo"
             />
           </div>
-          <div v-if="activeTab === 'discussion'" class="learn-tab-pane">
+          <div v-show="activeTab === 'discussion'" class="learn-tab-pane">
             <CommentSection
               v-if="currentLesson"
               :lesson-id="currentLesson.id"
+              :course-id="course?.id || ''"
+              :instructor-id="course?.instructor_id || ''"
+              :instructor-name="course?.instructor_name || ''"
+              :scroll-to-comment="$route.query.comment || ''"
             />
           </div>
         </div>
@@ -59,6 +63,11 @@
     </div>
 
     <aside class="learn-sidebar">
+      <div class="sidebar-back">
+        <button class="btn-back-sm" @click="$router.push(`/courses/${$route.params.id}`)">
+          &larr; {{ $t('common.back') }}
+        </button>
+      </div>
       <div class="sidebar-header">
         <h5 class="sidebar-title">{{ $t('courses.lessons') }}</h5>
         <div class="progress-summary" v-if="lessons.length > 0">
@@ -106,6 +115,7 @@ export default {
       progress: {},
       activeTab: 'about',
       currentVideoTime: 0,
+      lastSave: 0,
     }
   },
   computed: {
@@ -120,14 +130,16 @@ export default {
   async created() {
     try {
       const courseId = this.$route.params.id
-      const { data } = await api.get(`/courses/${courseId}`)
+      const [{ data }, enrollResp] = await Promise.all([
+        api.get(`/courses/${courseId}`),
+        api.get('/enrollments', { params: { course_id: courseId } }),
+      ])
       this.course = data.data.course || data.data
       this.lessons = data.data.lessons || []
       if (this.lessons.length > 0) {
         this.currentLesson = this.lessons[0]
       }
-      const enrollResp = await api.get('/enrollments')
-      const enrollment = (enrollResp.data.data || []).find((e) => e.course_id === courseId)
+      const enrollment = (enrollResp.data.data || [])[0]
       if (enrollment) {
         this.enrollmentId = enrollment.id
         let p = enrollment.progress
@@ -140,6 +152,9 @@ export default {
       this.$router.push('/courses')
     } finally {
       this.loading = false
+      if (this.$route.query.tab) {
+        this.activeTab = this.$route.query.tab
+      }
     }
   },
   methods: {
@@ -151,6 +166,8 @@ export default {
       this.currentVideoTime = time
       if (!this.enrollmentId || !this.currentLesson) return
       if (time > 5 && !this.progress[this.currentLesson.id]) {
+        if (Date.now() - this.lastSave < 10000) return
+        this.lastSave = Date.now()
         this.progress = { ...this.progress, [this.currentLesson.id]: true }
         api.put(`/enrollments/${this.enrollmentId}/progress`, {
           progress: this.progress,
@@ -228,6 +245,27 @@ export default {
     background-color: var(--color-bg-light);
     overflow-y: auto;
     flex-shrink: 0;
+  }
+
+  .sidebar-back {
+    padding: 0.75rem 1rem 0;
+  }
+
+  .btn-back-sm {
+    padding: 0.3rem 0.75rem;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 6px;
+    background: var(--color-bg);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .btn-back-sm:hover {
+    background-color: var(--color-primary);
+    color: #fff;
   }
 
   .sidebar-header {

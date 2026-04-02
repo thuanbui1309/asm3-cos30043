@@ -3,9 +3,9 @@
     <div class="row justify-content-center">
       <div class="col-12 col-lg-8">
         <div class="page-header mb-4">
-          <router-link to="/my-courses" class="back-link">
-            &larr; My Courses
-          </router-link>
+          <button class="btn-back" @click="$router.back()">
+            &larr; {{ $t('common.back') }}
+          </button>
           <h2 class="mt-2 mb-0">{{ $t('courses.editCourse') }}</h2>
           <p class="text-muted mt-1 mb-0">{{ $t('courses.editSubtitle') }}</p>
         </div>
@@ -160,14 +160,28 @@ export default {
 </script>
 
 <style scoped>
-  .back-link {
+  .btn-back {
+    padding: 0.4rem 1rem;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 8px;
+    background: var(--color-bg);
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--color-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .btn-back:hover {
+    background-color: var(--color-primary);
+    color: #fff;
   }
 
   .danger-zone {
-    border: 1px solid #f5c6cb;
+    border: 1.5px solid #f5c6cb;
     border-radius: 12px;
     overflow: hidden;
   }
@@ -175,7 +189,7 @@ export default {
   .danger-zone-title {
     padding: 0.75rem 1.25rem;
     background-color: #fff5f5;
-    border-bottom: 1px solid #f5c6cb;
+    border-bottom: 1.5px solid #f5c6cb;
     color: #dc3545;
     font-weight: 600;
     margin-bottom: 0;

@@ -3,7 +3,6 @@ import { supabase } from '@/services/supabase'
 
 export function useRealtimeComments(lessonId, fetchCommentsFn) {
   const realtimeEnabled = ref(!!supabase)
-  const onlineUsers = ref(0)
   const newCommentIds = ref(new Set())
 
   let channel = null
@@ -13,9 +12,7 @@ export function useRealtimeComments(lessonId, fetchCommentsFn) {
 
     unsubscribe()
 
-    channel = supabase.channel(`lesson-${id}`, {
-      config: { presence: { key: id } },
-    })
+    channel = supabase.channel(`lesson-${id}`)
 
     channel
       .on('postgres_changes', {
@@ -35,15 +32,7 @@ export function useRealtimeComments(lessonId, fetchCommentsFn) {
       }, () => {
         fetchCommentsFn()
       })
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
-        onlineUsers.value = Object.keys(state).length
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({ joined_at: new Date().toISOString() })
-        }
-      })
+      .subscribe()
   }
 
   function unsubscribe() {
@@ -77,7 +66,6 @@ export function useRealtimeComments(lessonId, fetchCommentsFn) {
 
   return {
     realtimeEnabled,
-    onlineUsers,
     isNewComment,
     clearNewFlag,
     unsubscribe,

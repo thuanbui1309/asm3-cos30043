@@ -6,18 +6,38 @@ const router = express.Router();
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const lim = parseInt(limit);
+    const { page: rawPage = 1, limit: rawLimit = 20 } = req.query;
+    const page = Math.max(1, parseInt(rawPage));
+    const lim = Math.min(100, Math.max(1, parseInt(rawLimit)));
+    const offset = (page - 1) * lim;
 
-    const notifications = await sql`
-      SELECT * FROM notifications
-      WHERE user_id = ${req.user.id}
-      ORDER BY created_at DESC
-      LIMIT ${lim} OFFSET ${offset}
-    `;
+    const [notifications, countResult] = await Promise.all([
+      sql`
+        SELECT * FROM notifications
+        WHERE user_id = ${req.user.id}
+        ORDER BY created_at DESC
+        LIMIT ${lim} OFFSET ${offset}
+      `,
+      sql`
+        SELECT COUNT(*)::int AS total FROM notifications
+        WHERE user_id = ${req.user.id}
+      `,
+    ]);
 
-    res.json({ success: true, data: notifications });
+    const total = countResult[0].total;
+
+    res.json({
+      success: true,
+      data: {
+        notifications,
+        pagination: {
+          page,
+          limit: lim,
+          total,
+          pages: Math.ceil(total / lim),
+        },
+      },
+    });
   } catch (error) {
     next(error);
   }

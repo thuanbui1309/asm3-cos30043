@@ -11,10 +11,12 @@
     <div v-if="showDropdown" class="notif-dropdown">
       <div class="notif-header">
         <span class="notif-title">{{ $t('notifications.title') }}</span>
-        <button v-if="unreadCount > 0" class="btn-text" @click="markAllRead">{{ $t('notifications.markAllRead') }}</button>
       </div>
       <div class="notif-list">
-        <div v-if="notifications.length === 0" class="notif-empty">
+        <div v-if="loadingList" class="notif-loading">
+          <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        </div>
+        <div v-else-if="notifications.length === 0" class="notif-empty">
           {{ $t('notifications.noNotifications') }}
         </div>
         <div
@@ -24,9 +26,14 @@
           :class="{ unread: !notif.is_read }"
           @click="handleClick(notif)"
         >
-          <div class="notif-message">{{ notif.message }}</div>
+          <div class="notif-message">{{ notif.message.split('|')[0] }}</div>
           <div class="notif-date">{{ formatDate(notif.created_at) }}</div>
         </div>
+      </div>
+      <div class="notif-footer">
+        <router-link to="/notifications" class="notif-see-all" @click="showDropdown = false">
+          {{ $t('notifications.seeAll') }}
+        </router-link>
       </div>
     </div>
   </div>
@@ -44,6 +51,7 @@ export default {
       notifications: [],
       showDropdown: false,
       pollInterval: null,
+      loadingList: false,
     }
   },
   computed: {
@@ -80,11 +88,14 @@ export default {
       }
     },
     async fetchNotifications() {
+      this.loadingList = true
       try {
-        const { data } = await api.get('/notifications?limit=10')
+        const { data } = await api.get('/notifications?limit=5')
         this.notifications = data.data || []
       } catch {
         // ignore
+      } finally {
+        this.loadingList = false
       }
     },
     async toggleDropdown() {
@@ -93,26 +104,19 @@ export default {
         await this.fetchNotifications()
       }
     },
-    async markAllRead() {
-      try {
-        await api.put('/notifications/read-all')
-        this.unreadCount = 0
-        this.notifications.forEach((n) => { n.is_read = true })
-      } catch {
-        // ignore
-      }
-    },
-    async handleClick(notif) {
+    handleClick(notif) {
       if (!notif.is_read) {
-        try {
-          await api.put(`/notifications/${notif.id}/read`)
-          notif.is_read = true
-          this.unreadCount = Math.max(0, this.unreadCount - 1)
-        } catch {
-          // ignore
-        }
+        api.put(`/notifications/${notif.id}/read`).catch(() => {})
+        notif.is_read = true
+        this.unreadCount = Math.max(0, this.unreadCount - 1)
       }
       this.showDropdown = false
+      const parts = notif.message.split('|')
+      const courseId = parts[2] || null
+      const commentId = notif.reference_id || null
+      if (courseId) {
+        this.$router.push(`/courses/${courseId}/learn?tab=discussion${commentId ? '&comment=' + commentId : ''}`)
+      }
     },
     handleOutsideClick(e) {
       if (!this.$el.contains(e.target)) {
@@ -205,6 +209,11 @@ export default {
     overflow-y: auto;
   }
 
+  .notif-loading {
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+
   .notif-empty {
     padding: 2rem 1rem;
     text-align: center;
@@ -241,5 +250,22 @@ export default {
     font-size: 0.72rem;
     color: var(--color-text-muted);
     margin-top: 0.15rem;
+  }
+
+  .notif-footer {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .notif-see-all {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .notif-see-all:hover {
+    text-decoration: underline;
   }
 </style>

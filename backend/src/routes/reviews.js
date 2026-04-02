@@ -8,44 +8,41 @@ const router = express.Router();
 router.get('/courses/:courseId/reviews', optionalAuth, async (req, res, next) => {
   try {
     const { courseId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const lim = parseInt(limit);
+    const { page: rawPage = 1, limit: rawLimit = 10 } = req.query;
+    const page = Math.max(1, parseInt(rawPage));
+    const lim = Math.min(100, Math.max(1, parseInt(rawLimit)));
+    const offset = (page - 1) * lim;
 
-    const reviews = await sql`
-      SELECT r.*, u.username, u.avatar_url
-      FROM reviews r
-      JOIN users u ON r.user_id = u.id
-      WHERE r.course_id = ${courseId}
-      ORDER BY r.created_at DESC
-      LIMIT ${lim} OFFSET ${offset}
-    `;
-
-    const countResult = await sql`
-      SELECT COUNT(*)::int AS total FROM reviews WHERE course_id = ${courseId}
-    `;
-
-    const aggregate = await sql`
-      SELECT
-        COALESCE(AVG(rating), 0) AS avg_rating,
-        COUNT(*)::int AS total_reviews,
-        COUNT(*) FILTER (WHERE rating = 1)::int AS r1,
-        COUNT(*) FILTER (WHERE rating = 2)::int AS r2,
-        COUNT(*) FILTER (WHERE rating = 3)::int AS r3,
-        COUNT(*) FILTER (WHERE rating = 4)::int AS r4,
-        COUNT(*) FILTER (WHERE rating = 5)::int AS r5
-      FROM reviews WHERE course_id = ${courseId}
-    `;
+    const [reviews, countResult, aggregate, userReviewResult] = await Promise.all([
+      sql`
+        SELECT r.*, u.username, u.avatar_url
+        FROM reviews r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.course_id = ${courseId}
+        ORDER BY r.created_at DESC
+        LIMIT ${lim} OFFSET ${offset}
+      `,
+      sql`
+        SELECT COUNT(*)::int AS total FROM reviews WHERE course_id = ${courseId}
+      `,
+      sql`
+        SELECT
+          COALESCE(AVG(rating), 0) AS avg_rating,
+          COUNT(*)::int AS total_reviews,
+          COUNT(*) FILTER (WHERE rating = 1)::int AS r1,
+          COUNT(*) FILTER (WHERE rating = 2)::int AS r2,
+          COUNT(*) FILTER (WHERE rating = 3)::int AS r3,
+          COUNT(*) FILTER (WHERE rating = 4)::int AS r4,
+          COUNT(*) FILTER (WHERE rating = 5)::int AS r5
+        FROM reviews WHERE course_id = ${courseId}
+      `,
+      req.user
+        ? sql`SELECT * FROM reviews WHERE user_id = ${req.user.id} AND course_id = ${courseId}`
+        : Promise.resolve([]),
+    ]);
 
     const agg = aggregate[0];
-
-    let userReview = null;
-    if (req.user) {
-      const ur = await sql`
-        SELECT * FROM reviews WHERE user_id = ${req.user.id} AND course_id = ${courseId}
-      `;
-      if (ur.length > 0) userReview = ur[0];
-    }
+    const userReview = userReviewResult.length > 0 ? userReviewResult[0] : null;
 
     res.json({
       success: true,
@@ -58,7 +55,7 @@ router.get('/courses/:courseId/reviews', optionalAuth, async (req, res, next) =>
           distribution: { 1: agg.r1, 2: agg.r2, 3: agg.r3, 4: agg.r4, 5: agg.r5 },
         },
         pagination: {
-          page: parseInt(page),
+          page,
           limit: lim,
           total: countResult[0].total,
           pages: Math.ceil(countResult[0].total / lim),

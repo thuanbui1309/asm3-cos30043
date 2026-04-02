@@ -2,6 +2,11 @@
   <div class="review-section">
     <h4 class="mb-3">{{ $t('reviews.title') }}</h4>
 
+    <div v-if="loading" class="mb-4">
+      <SkeletonLoader type="comment" :count="3" />
+    </div>
+
+    <template v-else>
     <div class="review-summary mb-4" v-if="aggregate.total_reviews > 0">
       <div class="summary-left">
         <div class="avg-score">{{ aggregate.avg_rating }}</div>
@@ -29,8 +34,10 @@
         class="form-control mb-2"
         rows="3"
         :placeholder="$t('reviews.commentPlaceholder')"
+        @keydown.enter.exact.prevent="submitReview"
       ></textarea>
       <button class="btn btn-primary btn-sm" :disabled="form.rating === 0 || submitting" @click="submitReview">
+        <span v-if="submitting" class="spinner-border spinner-border-sm me-1" role="status"></span>
         {{ $t('reviews.submit') }}
       </button>
     </div>
@@ -52,7 +59,7 @@
       <div class="mb-2">
         <StarRating :rating="editForm.rating" size="lg" interactive @update:rating="editForm.rating = $event" />
       </div>
-      <textarea v-model="editForm.comment" class="form-control mb-2" rows="3"></textarea>
+      <textarea v-model="editForm.comment" class="form-control mb-2" rows="3" @keydown.enter.exact.prevent="updateReview"></textarea>
       <div class="d-flex gap-2">
         <button class="btn btn-primary btn-sm" :disabled="submitting" @click="updateReview">{{ $t('reviews.save') }}</button>
         <button class="btn btn-outline-secondary btn-sm" @click="editing = false">{{ $t('common.cancel') }}</button>
@@ -76,16 +83,18 @@
     <div v-if="pagination.page < pagination.pages" class="text-center mt-3">
       <button class="btn btn-outline-primary btn-sm" @click="loadMore">{{ $t('reviews.loadMore') }}</button>
     </div>
+    </template>
   </div>
 </template>
 
 <script>
 import StarRating from './StarRating.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import api from '@/services/api'
 
 export default {
   name: 'ReviewSection',
-  components: { StarRating },
+  components: { StarRating, SkeletonLoader },
   props: {
     courseId: { type: String, required: true },
     isEnrolled: { type: Boolean, default: false },
@@ -101,6 +110,7 @@ export default {
       editForm: { rating: 0, comment: '' },
       editing: false,
       submitting: false,
+      loading: true,
     }
   },
   computed: {
@@ -113,6 +123,7 @@ export default {
   },
   methods: {
     async fetchReviews(page = 1) {
+      if (page === 1 && this.reviews.length === 0 && !this.userReview) this.loading = true
       try {
         const { data } = await api.get(`/courses/${this.courseId}/reviews?page=${page}&limit=5`)
         const d = data.data
@@ -127,6 +138,8 @@ export default {
         this.pagination = d.pagination
       } catch {
         // ignore
+      } finally {
+        this.loading = false
       }
     },
     distPercent(star) {
@@ -134,6 +147,7 @@ export default {
       return ((this.aggregate.distribution[star] || 0) / this.aggregate.total_reviews) * 100
     },
     async submitReview() {
+      if (this.form.rating === 0 || this.submitting) return
       this.submitting = true
       try {
         await api.post(`/courses/${this.courseId}/reviews`, {
@@ -150,10 +164,12 @@ export default {
       }
     },
     startEdit() {
+      if (!this.userReview) return
       this.editForm = { rating: this.userReview.rating, comment: this.userReview.comment || '' }
       this.editing = true
     },
     async updateReview() {
+      if (this.submitting) return
       this.submitting = true
       try {
         await api.put(`/reviews/${this.userReview.id}`, {

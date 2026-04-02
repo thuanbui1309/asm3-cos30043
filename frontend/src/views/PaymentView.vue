@@ -165,7 +165,7 @@ export default {
 
   .payment-card {
     background-color: var(--color-bg);
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border-strong);
     border-radius: 12px;
     padding: 2rem;
   }
@@ -177,7 +177,7 @@ export default {
     padding: 1rem;
     background-color: var(--color-bg-light);
     border-radius: 8px;
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border-strong);
   }
 
   .course-thumb {
@@ -196,7 +196,7 @@ export default {
 
   .qr-section {
     background-color: var(--color-bg-light);
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border-strong);
     border-radius: 12px;
     padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);

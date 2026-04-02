@@ -19,7 +19,22 @@ const storage = new CloudinaryStorage({
   }),
 });
 
-const upload = multer({ storage, limits: { fileSize: 200 * 1024 * 1024 } });
+const ALLOWED_MIMETYPES = [
+  'image/jpeg', 'image/png', 'image/webp',
+  'video/mp4', 'video/quicktime',
+];
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIMETYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed'), false);
+    }
+  },
+});
 
 const router = Router();
 
@@ -29,7 +44,6 @@ router.post('/', authenticate, (req, res, next) => {
   }
   next();
 }, upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ success: false, error: 'No file provided' });
   res.json({ success: true, data: { url: req.file.path } });
 });
 

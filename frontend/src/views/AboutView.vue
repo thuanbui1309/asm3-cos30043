@@ -26,20 +26,33 @@
         <div class="row g-5 align-items-start">
           <div class="col-12 col-md-5">
             <h2 class="mb-4">{{ $t('about.tryTitle') }}</h2>
-            <div class="mb-4">
-              <label for="visitorName" class="form-label">{{ $t('about.yourName') }}</label>
+            <div class="mb-3">
+              <label for="firstName" class="form-label">{{ $t('about.firstName') }}</label>
               <input
-                id="visitorName"
-                v-model="visitorName"
+                id="firstName"
+                v-model="firstName"
                 type="text"
                 class="form-control"
-                :placeholder="$t('about.namePlaceholder')"
-                aria-label="Your name"
+                :placeholder="$t('about.firstNamePlaceholder')"
+                aria-label="First name"
+                required
               />
-              <p v-if="visitorName" class="welcome-msg mt-2">
-                {{ $t('about.welcome') }}, <strong>{{ visitorName }}</strong>! {{ $t('about.welcomeDesc') }}
-              </p>
             </div>
+            <div class="mb-3">
+              <label for="lastName" class="form-label">{{ $t('about.lastName') }}</label>
+              <input
+                id="lastName"
+                v-model="lastName"
+                type="text"
+                class="form-control"
+                :placeholder="$t('about.lastNamePlaceholder')"
+                aria-label="Last name"
+                required
+              />
+            </div>
+            <p v-if="firstName || lastName" class="welcome-msg mb-4">
+              {{ $t('about.welcome') }}, <strong>{{ firstName }} {{ lastName }}</strong>! {{ $t('about.welcomeDesc') }}
+            </p>
             <div>
               <p class="form-label mb-2">{{ $t('about.interestLabel') }}</p>
               <div v-for="track in tracks" :key="track.key" class="form-check mb-2">
@@ -59,6 +72,7 @@
           </div>
           <div class="col-12 col-md-7">
             <div class="track-card">
+              <img :src="trackImages[selectedTrack]" :alt="$t(`about.tracks.${selectedTrack}.label`)" class="track-image" />
               <div class="track-tag">{{ $t(`about.tracks.${selectedTrack}.label`) }}</div>
               <h3>{{ $t(`about.tracks.${selectedTrack}.title`) }}</h3>
               <p>{{ $t(`about.tracks.${selectedTrack}.desc`) }}</p>
@@ -81,8 +95,15 @@ export default {
   name: 'AboutView',
   data() {
     return {
-      visitorName: '',
+      firstName: '',
+      lastName: '',
       selectedTrack: 'web',
+      trackImages: {
+        web: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&h=400&fit=crop',
+        data: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop',
+        design: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=400&fit=crop',
+        devops: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&h=400&fit=crop',
+      },
       values: [
         { key: 'mission', stat: '10K+' },
         { key: 'courses', stat: '150+' },
@@ -172,6 +193,14 @@ export default {
     box-shadow: var(--shadow-sm);
     padding: 2rem;
     border-left: 4px solid var(--color-primary);
+  }
+
+  .track-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 1rem;
   }
 
   .track-tag {

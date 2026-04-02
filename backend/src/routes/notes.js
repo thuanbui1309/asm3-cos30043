@@ -45,6 +45,10 @@ router.put('/notes/:id', authenticate, async (req, res, next) => {
     const { id } = req.params;
     const { content } = req.body;
 
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ success: false, error: 'Content is required and must be a string' });
+    }
+
     const existing = await sql`SELECT * FROM notes WHERE id = ${id}`;
     if (existing.length === 0) return res.status(404).json({ success: false, error: 'Note not found' });
     if (existing[0].user_id !== req.user.id) return res.status(403).json({ success: false, error: 'Not authorized' });

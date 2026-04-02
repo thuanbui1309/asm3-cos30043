@@ -18,13 +18,14 @@
                 v-model="form.email"
                 type="email"
                 class="form-control"
-                :class="{ 'is-invalid': submitted && !form.email }"
+                :class="{ 'is-invalid': errors.email }"
                 :placeholder="$t('auth.emailPlaceholder')"
                 autocomplete="email"
                 required
                 v-focus
+                @blur="validateField('email')"
               />
-              <div class="invalid-feedback">{{ $t('auth.emailRequired') }}</div>
+              <small v-if="errors.email" class="text-danger error-text">{{ errors.email }}</small>
             </div>
 
             <div class="mb-4">
@@ -34,15 +35,16 @@
                 v-model="form.password"
                 type="password"
                 class="form-control"
-                :class="{ 'is-invalid': submitted && !form.password }"
+                :class="{ 'is-invalid': errors.password }"
                 :placeholder="$t('auth.passwordPlaceholder')"
                 autocomplete="current-password"
                 required
+                @blur="validateField('password')"
               />
-              <div class="invalid-feedback">{{ $t('auth.passwordRequired') }}</div>
+              <small v-if="errors.password" class="text-danger error-text">{{ errors.password }}</small>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100" :disabled="loading">
+            <button type="submit" class="btn btn-primary w-100" :disabled="loading || hasErrors">
               <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
               {{ $t('auth.login') }}
             </button>
@@ -66,20 +68,44 @@ export default {
   data() {
     return {
       form: { email: '', password: '' },
+      errors: {},
       submitted: false,
     }
   },
   computed: {
     loading() { return useAuthStore().loading },
     error() { return useAuthStore().error },
+    hasErrors() {
+      return this.submitted && Object.values(this.errors).some(Boolean)
+    },
   },
   created() {
     useAuthStore().error = null
   },
   methods: {
+    validateField(field) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const val = this.form[field]
+      let err = ''
+
+      if (field === 'email') {
+        if (!val) err = this.$t('validation.required')
+        else if (!emailRegex.test(val)) err = this.$t('validation.emailInvalid')
+      } else if (field === 'password') {
+        if (!val) err = this.$t('validation.required')
+      }
+
+      this.errors = { ...this.errors, [field]: err }
+    },
+    validateAll() {
+      for (const field of ['email', 'password']) {
+        this.validateField(field)
+      }
+      return !Object.values(this.errors).some(Boolean)
+    },
     async handleLogin() {
       this.submitted = true
-      if (!this.form.email || !this.form.password) return
+      if (!this.validateAll()) return
 
       try {
         await useAuthStore().login(this.form)
@@ -135,5 +161,11 @@ export default {
     margin-bottom: 0;
     font-size: 0.9rem;
     color: var(--color-text-light);
+  }
+
+  .error-text {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: block;
   }
 </style>

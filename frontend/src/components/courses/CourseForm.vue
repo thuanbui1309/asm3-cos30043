@@ -5,7 +5,7 @@
         <span class="form-section-number">1</span>
         <div>
           <h5 class="form-section-title">{{ $t('courses.courseTitle') }}</h5>
-          <p class="form-section-desc">Give your course a clear, descriptive name</p>
+          <p class="form-section-desc">{{ $t('courseForm.titleDesc') }}</p>
         </div>
       </div>
       <div class="form-section-body">
@@ -16,11 +16,11 @@
             v-model="form.title"
             type="text"
             class="form-control"
-            :class="{ 'is-invalid': submitted && !form.title }"
-            placeholder="e.g. Complete Vue.js 3 Bootcamp"
+            :class="{ 'is-invalid': fieldErrors.title }"
+            :placeholder="$t('courseForm.titlePlaceholder')"
             required
           />
-          <div class="invalid-feedback">{{ $t('courses.courseTitle') }} is required</div>
+          <small v-if="fieldErrors.title" class="text-danger error-text">{{ fieldErrors.title }}</small>
         </div>
         <div class="mb-0">
           <label for="description" class="form-label">{{ $t('courses.courseDescription') }} <span class="text-danger">*</span></label>
@@ -29,11 +29,11 @@
             v-model="form.description"
             class="form-control"
             rows="4"
-            :class="{ 'is-invalid': submitted && !form.description }"
-            placeholder="Describe what students will learn, who it's for, and what's included..."
+            :class="{ 'is-invalid': fieldErrors.description }"
+            :placeholder="$t('courseForm.descriptionPlaceholder')"
             required
           ></textarea>
-          <div class="invalid-feedback">{{ $t('courses.courseDescription') }} is required</div>
+          <small v-if="fieldErrors.description" class="text-danger error-text">{{ fieldErrors.description }}</small>
         </div>
       </div>
     </div>
@@ -42,26 +42,32 @@
       <div class="form-section-header">
         <span class="form-section-number">2</span>
         <div>
-          <h5 class="form-section-title">Course Details</h5>
-          <p class="form-section-desc">Set category, difficulty level, and pricing</p>
+          <h5 class="form-section-title">{{ $t('courseForm.detailsTitle') }}</h5>
+          <p class="form-section-desc">{{ $t('courseForm.detailsDesc') }}</p>
         </div>
       </div>
       <div class="form-section-body">
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <label for="category" class="form-label">{{ $t('courses.courseCategory') }}</label>
-            <select id="category" v-model="form.category" class="form-select">
+            <select
+              id="category"
+              v-model="form.category"
+              class="form-select"
+              :class="{ 'is-invalid': fieldErrors.category }"
+            >
               <option v-for="cat in categories" :key="cat" :value="cat">
                 {{ $t(`courses.categories.${cat}`) }}
               </option>
             </select>
+            <small v-if="fieldErrors.category" class="text-danger error-text">{{ fieldErrors.category }}</small>
           </div>
           <div class="col-12">
             <label class="form-label">{{ $t('courses.coursePrice') }}</label>
             <div class="price-type-toggle mb-3" :class="{ 'price-locked': priceLocked }">
               <label class="price-type-option" :class="{ active: form.price === 0 }">
                 <input v-model.number="form.price" type="radio" :value="0" class="visually-hidden" :disabled="priceLocked" />
-                Free
+                {{ $t('courses.free') }}
               </label>
               <label class="price-type-option" :class="{ active: form.price > 0 }">
                 <input
@@ -71,7 +77,7 @@
                   :disabled="priceLocked"
                   @change="form.price = 299000"
                 />
-                Paid
+                {{ $t('courses.paid') }}
               </label>
             </div>
             <div v-if="form.price > 0" class="price-input-wrap">
@@ -81,7 +87,7 @@
                 type="text"
                 class="form-control price-input"
                 inputmode="numeric"
-                placeholder="e.g. 299000"
+                :placeholder="$t('courseForm.pricePlaceholder')"
                 :disabled="priceLocked"
                 @focus="onPriceFocus"
                 @blur="onPriceBlur"
@@ -89,6 +95,7 @@
               />
               <span class="price-suffix">₫</span>
             </div>
+            <small v-if="fieldErrors.price" class="text-danger error-text">{{ fieldErrors.price }}</small>
             <p v-if="priceLocked" class="price-lock-notice">
               {{ $t('courses.priceLocked') }}
             </p>
@@ -112,6 +119,7 @@
                 {{ $t(`courses.${level}`) }}
               </label>
             </div>
+            <small v-if="fieldErrors.difficulty" class="text-danger error-text">{{ fieldErrors.difficulty }}</small>
           </div>
         </div>
       </div>
@@ -122,13 +130,13 @@
         <span class="form-section-number">3</span>
         <div>
           <h5 class="form-section-title">{{ $t('courses.courseThumbnail') }}</h5>
-          <p class="form-section-desc">Upload a cover image for the course (16:9, JPEG/PNG/WebP)</p>
+          <p class="form-section-desc">{{ $t('courseForm.thumbnailDesc') }}</p>
         </div>
       </div>
       <div class="form-section-body">
         <div class="row g-3 align-items-start">
           <div class="col-12 col-md-7">
-            <label for="thumbnail" class="form-label">Image file</label>
+            <label for="thumbnail" class="form-label">{{ $t('courseForm.imageFile') }}</label>
             <input
               id="thumbnail"
               type="file"
@@ -139,21 +147,21 @@
             />
             <div v-if="uploading.thumbnail" class="upload-status mt-2">
               <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-              Uploading...
+              {{ $t('courseForm.uploading') }}
             </div>
             <div v-else-if="uploadErrors.thumbnail" class="upload-status mt-2 text-danger">
               {{ uploadErrors.thumbnail }}
             </div>
             <div v-else-if="form.thumbnail_url" class="upload-status mt-2 text-success">
-              Uploaded
+              {{ $t('courseForm.uploaded') }}
             </div>
-            <div class="form-text">Recommended: 1280x720 px, max 10 MB</div>
+            <div class="form-text">{{ $t('courseForm.thumbnailHint') }}</div>
           </div>
           <div class="col-12 col-md-5">
             <div class="thumbnail-preview">
               <img v-if="form.thumbnail_url" :src="form.thumbnail_url" alt="Thumbnail preview" />
               <div v-else class="thumbnail-placeholder">
-                <span>No image</span>
+                <span>{{ $t('courseForm.noImage') }}</span>
               </div>
             </div>
           </div>
@@ -166,21 +174,21 @@
         <span class="form-section-number">4</span>
         <div>
           <h5 class="form-section-title">{{ $t('courses.lessons') }}</h5>
-          <p class="form-section-desc">Add video lessons to your course curriculum</p>
+          <p class="form-section-desc">{{ $t('courseForm.lessonsDesc') }}</p>
         </div>
       </div>
       <div class="form-section-body">
         <div v-if="form.lessons.length === 0" class="lessons-empty">
-          <p class="text-muted mb-3">No lessons added yet. Add your first lesson below.</p>
+          <p class="text-muted mb-3">{{ $t('courseForm.noLessons') }}</p>
         </div>
 
         <div
           v-for="(lesson, index) in form.lessons"
-          :key="index"
+          :key="lesson.id"
           class="lesson-item"
         >
           <div class="lesson-item-header">
-            <span class="lesson-index">Lesson {{ index + 1 }}</span>
+            <span class="lesson-index">{{ $t('courseForm.lessonIndex', { n: index + 1 }) }}</span>
             <button type="button" class="btn-remove-lesson" @click="removeLesson(index)">
               {{ $t('courses.removeLesson') }}
             </button>
@@ -192,7 +200,7 @@
                 v-model="lesson.title"
                 type="text"
                 class="form-control"
-                placeholder="e.g. Introduction to Vue.js"
+                :placeholder="$t('courseForm.lessonTitlePlaceholder')"
               />
             </div>
             <div class="col-12 col-md-7">
@@ -206,13 +214,13 @@
               />
               <div v-if="uploading.lessons[index]" class="upload-status mt-1">
                 <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                Uploading...
+                {{ $t('courseForm.uploading') }}
               </div>
               <div v-else-if="uploadErrors.lessons[index]" class="upload-status mt-1 text-danger">
                 {{ uploadErrors.lessons[index] }}
               </div>
               <div v-else-if="lesson.video_url" class="upload-status mt-1 text-success">
-                Video uploaded
+                {{ $t('courseForm.videoUploaded') }}
               </div>
             </div>
             <div class="col-12">
@@ -221,7 +229,7 @@
                 v-model="lesson.description"
                 class="form-control"
                 rows="2"
-                placeholder="Brief lesson summary..."
+                :placeholder="$t('courseForm.lessonDescPlaceholder')"
               ></textarea>
             </div>
           </div>
@@ -239,7 +247,7 @@
         {{ $t('courses.saveCourse') }}
       </button>
       <button type="button" class="btn btn-outline-secondary" @click="$router.back()">
-        Cancel
+        {{ $t('common.cancel') }}
       </button>
     </div>
   </form>
@@ -266,6 +274,18 @@ export default {
     }
   },
   computed: {
+    fieldErrors() {
+      if (!this.submitted) return {}
+      const errors = {}
+      if (!this.form.title) errors.title = this.$t('validation.required')
+      if (!this.form.description) errors.description = this.$t('validation.required')
+      if (!this.form.category) errors.category = this.$t('validation.required')
+      if (!this.form.difficulty) errors.difficulty = this.$t('validation.required')
+      if (this.form.price !== 0 && (!this.form.price || this.form.price <= 0)) {
+        errors.price = this.$t('validation.pricePositive')
+      }
+      return errors
+    },
     isUploading() {
       return this.uploading.thumbnail || Object.values(this.uploading.lessons).some(Boolean)
     },
@@ -292,7 +312,7 @@ export default {
       if (!isNaN(raw)) this.form.price = raw
     },
     addLesson() {
-      this.form.lessons.push({ title: '', video_url: '', description: '' })
+      this.form.lessons.push({ id: Date.now(), title: '', video_url: '', description: '' })
     },
     removeLesson(index) {
       this.form.lessons.splice(index, 1)
@@ -351,7 +371,7 @@ export default {
 <style scoped>
   .form-section {
     background-color: var(--color-bg);
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border-strong);
     border-radius: 12px;
     margin-bottom: 1.5rem;
     overflow: hidden;
@@ -526,7 +546,7 @@ export default {
   }
 
   .lesson-item {
-    border: 1px solid var(--color-border);
+    border: 1.5px solid var(--color-border-strong);
     border-radius: 8px;
     padding: 1rem;
     margin-bottom: 0.75rem;
@@ -581,5 +601,11 @@ export default {
     border-radius: 4px;
     letter-spacing: 0.02em;
     padding: 0.5rem 2rem;
+  }
+
+  .error-text {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: block;
   }
 </style>

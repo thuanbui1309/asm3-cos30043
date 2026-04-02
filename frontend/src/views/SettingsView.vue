@@ -5,30 +5,9 @@
     <div class="row">
       <div class="col-12 col-md-8 col-lg-6">
         <div class="card p-4 mb-4">
-          <h5 class="mb-3">{{ $t('settings.appearance') }}</h5>
-
-          <div class="mb-4">
-            <label class="form-label">{{ $t('settings.theme') }}</label>
-            <div class="d-flex gap-2">
-              <button
-                class="btn"
-                :class="isDark ? 'btn-outline-secondary' : 'btn-primary'"
-                @click="setTheme('light')"
-              >
-                {{ $t('settings.light') }}
-              </button>
-              <button
-                class="btn"
-                :class="isDark ? 'btn-primary' : 'btn-outline-secondary'"
-                @click="setTheme('dark')"
-              >
-                {{ $t('settings.dark') }}
-              </button>
-            </div>
-          </div>
+          <h5 class="mb-3">{{ $t('settings.language') }}</h5>
 
           <div>
-            <label class="form-label">{{ $t('settings.language') }}</label>
             <div class="d-flex gap-2">
               <button
                 class="btn"
@@ -55,22 +34,12 @@
 <script>
 export default {
   name: 'SettingsView',
-  data() {
-    return {
-      isDark: document.documentElement.getAttribute('data-theme') === 'dark',
-    }
-  },
   computed: {
     currentLocale() {
       return this.$i18n.locale
     },
   },
   methods: {
-    setTheme(theme) {
-      this.isDark = theme === 'dark'
-      document.documentElement.setAttribute('data-theme', theme)
-      localStorage.setItem('theme', theme)
-    },
     setLocale(locale) {
       this.$i18n.locale = locale
       localStorage.setItem('locale', locale)

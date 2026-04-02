@@ -23,8 +23,8 @@ router.post('/register', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Username, email, and password are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters with 1 uppercase letter and 1 number' });
     }
 
     const userRole = role === 'instructor' ? 'instructor' : 'student';
@@ -119,6 +119,11 @@ router.put('/me', authenticate, async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Username and email are required' });
     }
 
+    const emailTaken = await sql`SELECT id FROM users WHERE email = ${email} AND id != ${req.user.id}`;
+    if (emailTaken.length > 0) {
+      return res.status(409).json({ success: false, error: 'Email already in use by another account' });
+    }
+
     const result = await sql`
       UPDATE users SET username = ${username}, email = ${email}
       WHERE id = ${req.user.id}
@@ -133,15 +138,46 @@ router.put('/me', authenticate, async (req, res, next) => {
 
 router.get('/search', authenticate, async (req, res, next) => {
   try {
-    const { q } = req.query;
-    if (!q || q.length < 1) {
+    const { q = '', course_id } = req.query;
+
+    if (!course_id && !q) {
       return res.json({ success: true, data: [] });
     }
-    const result = await sql`
-      SELECT id, username, avatar_url FROM users
-      WHERE username ILIKE ${q + '%'}
-      LIMIT 5
-    `;
+
+    let result;
+    if (course_id && q) {
+      result = await sql`
+        SELECT u.id, u.username, u.avatar_url, u.role FROM users u
+        WHERE u.username ILIKE ${`${q}%`}
+          AND (
+            u.id IN (SELECT user_id FROM enrollments WHERE course_id = ${course_id})
+            OR u.id = (SELECT instructor_id FROM courses WHERE id = ${course_id})
+          )
+        ORDER BY
+          CASE WHEN u.role = 'instructor' THEN 0 ELSE 1 END,
+          u.username
+        LIMIT 10
+      `;
+    } else if (course_id) {
+      result = await sql`
+        SELECT u.id, u.username, u.avatar_url, u.role FROM users u
+        WHERE (
+          u.id IN (SELECT user_id FROM enrollments WHERE course_id = ${course_id})
+          OR u.id = (SELECT instructor_id FROM courses WHERE id = ${course_id})
+        )
+        ORDER BY
+          CASE WHEN u.role = 'instructor' THEN 0 ELSE 1 END,
+          u.username
+        LIMIT 10
+      `;
+    } else {
+      result = await sql`
+        SELECT id, username, avatar_url, role FROM users
+        WHERE username ILIKE ${`${q}%`}
+        LIMIT 5
+      `;
+    }
+
     res.json({ success: true, data: result });
   } catch (error) {
     next(error);
