@@ -67,9 +67,14 @@
   },
   "news": {
     "title": "Tin Tức",
-    "search": "Tìm kiếm theo tiêu đề, nội dung, danh mục hoặc ngày...",
     "noResults": "Không tìm thấy tin tức phù hợp.",
-    "all": "Tất cả"
+    "all": "Tất cả danh mục",
+    "filterTitle": "Tiêu đề",
+    "filterTitlePlaceholder": "Tìm theo tiêu đề...",
+    "filterContent": "Nội dung",
+    "filterContentPlaceholder": "Tìm theo nội dung...",
+    "filterCategory": "Danh mục",
+    "filterDate": "Ngày"
   },
   "about": {
     "title": "Về Learnify",

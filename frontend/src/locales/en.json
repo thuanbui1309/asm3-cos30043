@@ -67,9 +67,14 @@
   },
   "news": {
     "title": "News",
-    "search": "Search news by title, content, category, or date...",
-    "noResults": "No news found matching your search.",
-    "all": "All"
+    "noResults": "No news found matching your filters.",
+    "all": "All Categories",
+    "filterTitle": "Title",
+    "filterTitlePlaceholder": "Search by title...",
+    "filterContent": "Content",
+    "filterContentPlaceholder": "Search by content...",
+    "filterCategory": "Category",
+    "filterDate": "Date"
   },
   "about": {
     "title": "About Learnify",

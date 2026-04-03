@@ -2,21 +2,42 @@
   <div class="container py-4">
     <h2 class="mb-4">{{ $t('news.title') }}</h2>
 
-    <div class="row mb-4">
-      <div class="col-12 col-md-8">
+    <div class="row g-2 mb-4">
+      <div class="col-12 col-md-6 col-lg-3">
+        <label class="form-label small fw-semibold" for="filter-title">{{ $t('news.filterTitle') }}</label>
         <input
-          v-model="searchQuery"
+          id="filter-title"
+          v-model="filterTitle"
           type="text"
           class="form-control"
-          :placeholder="$t('news.search')"
-          aria-label="Search news"
+          :placeholder="$t('news.filterTitlePlaceholder')"
         />
       </div>
-      <div class="col-12 col-md-4 mt-2 mt-md-0">
-        <select v-model="selectedCategory" class="form-select" aria-label="Filter by category">
+      <div class="col-12 col-md-6 col-lg-3">
+        <label class="form-label small fw-semibold" for="filter-content">{{ $t('news.filterContent') }}</label>
+        <input
+          id="filter-content"
+          v-model="filterContent"
+          type="text"
+          class="form-control"
+          :placeholder="$t('news.filterContentPlaceholder')"
+        />
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <label class="form-label small fw-semibold" for="filter-category">{{ $t('news.filterCategory') }}</label>
+        <select id="filter-category" v-model="filterCategory" class="form-select" aria-label="Filter by category">
           <option value="">{{ $t('news.all') }}</option>
           <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
         </select>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <label class="form-label small fw-semibold" for="filter-date">{{ $t('news.filterDate') }}</label>
+        <input
+          id="filter-date"
+          v-model="filterDate"
+          type="date"
+          class="form-control"
+        />
       </div>
     </div>
 
@@ -48,8 +69,10 @@ export default {
   data() {
     return {
       news: newsData,
-      searchQuery: '',
-      selectedCategory: '',
+      filterTitle: '',
+      filterContent: '',
+      filterCategory: '',
+      filterDate: '',
       currentPage: 1,
       perPage: 5,
     }
@@ -59,15 +82,14 @@ export default {
       return [...new Set(this.news.map(n => n.category))]
     },
     filteredNews() {
-      const query = this.searchQuery.toLowerCase()
+      const title = this.filterTitle.toLowerCase()
+      const content = this.filterContent.toLowerCase()
       return this.news.filter(item => {
-        const matchesSearch = !query ||
-          item.title.toLowerCase().includes(query) ||
-          item.content.toLowerCase().includes(query) ||
-          item.category.toLowerCase().includes(query) ||
-          item.date.toLowerCase().includes(query)
-        const matchesCategory = !this.selectedCategory || item.category === this.selectedCategory
-        return matchesSearch && matchesCategory
+        if (title && !item.title.toLowerCase().includes(title)) return false
+        if (content && !item.content.toLowerCase().includes(content)) return false
+        if (this.filterCategory && item.category !== this.filterCategory) return false
+        if (this.filterDate && item.date !== this.filterDate) return false
+        return true
       })
     },
     paginatedNews() {
@@ -76,8 +98,10 @@ export default {
     },
   },
   watch: {
-    searchQuery() { this.currentPage = 1 },
-    selectedCategory() { this.currentPage = 1 },
+    filterTitle() { this.currentPage = 1 },
+    filterContent() { this.currentPage = 1 },
+    filterCategory() { this.currentPage = 1 },
+    filterDate() { this.currentPage = 1 },
   },
 }
 </script>
