@@ -91,7 +91,7 @@ export default {
       this.loadingList = true
       try {
         const { data } = await api.get('/notifications?limit=5')
-        this.notifications = data.data || []
+        this.notifications = data.data?.notifications || []
       } catch {
         // ignore
       } finally {

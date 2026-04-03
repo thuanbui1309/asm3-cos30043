@@ -72,7 +72,7 @@ export default {
       this.loading = this.page === 1
       try {
         const { data } = await api.get(`/notifications?page=${this.page}&limit=20`)
-        const items = data.data || []
+        const items = data.data?.notifications || []
         if (this.page === 1) {
           this.notifications = items
         } else {
