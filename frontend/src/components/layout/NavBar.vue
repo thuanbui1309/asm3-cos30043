@@ -38,7 +38,8 @@
                 <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855A7.97 7.97 0 0 0 5.145 4H7.5V1.077zM4.09 4a9.267 9.267 0 0 1 .64-1.539 6.7 6.7 0 0 1 .597-.933A7.025 7.025 0 0 0 2.255 4H4.09zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a6.958 6.958 0 0 0-.656 2.5h2.49zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5H4.847zM8.5 5v2.5h2.99a12.495 12.495 0 0 0-.337-2.5H8.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5H4.51zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5H8.5zM5.145 12c.138.386.295.744.468 1.068.552 1.035 1.218 1.65 1.887 1.855V12H5.145zm.182 2.472a6.696 6.696 0 0 1-.597-.933A9.268 9.268 0 0 1 4.09 12H2.255a7.024 7.024 0 0 0 3.072 2.472zM3.82 11a13.652 13.652 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5H3.82zm6.853 3.472A7.024 7.024 0 0 0 13.745 12H11.91a9.27 9.27 0 0 1-.64 1.539 6.688 6.688 0 0 1-.597.933zM8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855.173-.324.33-.682.468-1.068H8.5zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.65 13.65 0 0 1-.312 2.5zm2.802-3.5a6.959 6.959 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5h2.49zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7.024 7.024 0 0 0-3.072-2.472c.218.284.418.598.597.933zM10.855 4a7.966 7.966 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4h2.355z"/>
               </svg>
             </button>
-            <div class="dropdown">
+
+            <div class="dropdown d-none d-md-block">
               <button class="avatar-btn" data-bs-toggle="dropdown" aria-expanded="false" :aria-label="$t('nav.account')">
                 {{ userInitials }}
               </button>
@@ -63,6 +64,10 @@
                 </li>
               </ul>
             </div>
+
+            <button class="avatar-btn d-md-none" @click="showAccountPanel = !showAccountPanel" :aria-expanded="showAccountPanel" :aria-label="$t('nav.account')">
+              {{ userInitials }}
+            </button>
           </template>
 
           <template v-else>
@@ -74,6 +79,15 @@
               </svg>
             </button>
           </template>
+        </div>
+
+        <div class="account-panel d-md-none" :class="{ open: showAccountPanel }">
+          <div class="account-panel-header">{{ userName }}</div>
+          <router-link class="account-panel-item" to="/my-courses" @click="showAccountPanel = false">{{ $t('nav.myCourses') }}</router-link>
+          <router-link v-if="isInstructor" class="account-panel-item" to="/courses/create" @click="showAccountPanel = false">{{ $t('courses.createCourse') }}</router-link>
+          <router-link class="account-panel-item" to="/notifications" @click="showAccountPanel = false">{{ $t('notifications.title') }}</router-link>
+          <router-link class="account-panel-item" to="/profile" @click="showAccountPanel = false">{{ $t('nav.profile') }}</router-link>
+          <a class="account-panel-item text-danger" href="#" @click.prevent="handleLogout">{{ $t('nav.logout') }}</a>
         </div>
       </div>
     </div>
@@ -117,6 +131,7 @@ export default {
   data() {
     return {
       showLangModal: false,
+      showAccountPanel: false,
       indicatorStyle: { left: '0px', width: '0px', opacity: 0 },
     }
   },
@@ -171,7 +186,6 @@ export default {
 <style scoped>
   .navbar {
     padding: 0;
-    height: 56px;
     z-index: 1030;
   }
 
@@ -179,6 +193,46 @@ export default {
     background-color: #fff;
     border-bottom: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm);
+  }
+
+  .navbar .container {
+    min-height: 56px;
+    align-items: center;
+  }
+
+  .navbar-toggler {
+    user-select: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .navbar-toggler:active {
+    transform: none;
+  }
+
+  @media (max-width: 767.98px) {
+    .navbar-collapse {
+      background-color: #fff;
+    }
+
+    .navbar-nav {
+      gap: 0.25rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .navbar-collapse .d-flex {
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .nav-indicator {
+      display: none;
+    }
   }
 
   .navbar-brand {
@@ -333,6 +387,41 @@ export default {
 
   .dropdown-item.text-danger:hover {
     background-color: #fff5f5;
+    color: #dc3545;
+  }
+
+  /* Mobile Account Panel */
+  .account-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .account-panel.open {
+    max-height: 300px;
+  }
+
+  .account-panel-header {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    padding: 8px 0.75rem 4px;
+  }
+
+  .account-panel-item {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 0.375rem 0.75rem;
+    transition: color 0.15s ease;
+  }
+
+  .account-panel-item:hover {
+    color: var(--color-primary);
+  }
+
+  .account-panel-item.text-danger {
     color: #dc3545;
   }
 

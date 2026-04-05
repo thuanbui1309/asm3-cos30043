@@ -180,6 +180,7 @@ import { useAuthStore } from '@/stores/auth'
 import StarRating from '@/components/courses/StarRating.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
+import defaultThumb from '@/assets/images/default.svg'
 
 export default {
   name: 'CoursesView',
@@ -197,7 +198,7 @@ export default {
       ownershipFilter: 'all',
       pagination: { page: 1, limit: 15, total: 0, pages: 0 },
       categories: ['web-dev', 'data-science', 'mobile-dev', 'design', 'devops', 'other'],
-      defaultThumbnail: 'https://placehold.co/400x225/e8e8e8/999?text=Course',
+      defaultThumbnail: defaultThumb,
       showAutocomplete: false,
       autocompleteSuggestions: [],
       _searchTimer: null,

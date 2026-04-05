@@ -273,6 +273,7 @@ import api from '@/services/api'
 import StarRating from '@/components/courses/StarRating.vue'
 import CourseCardSmall from '@/components/courses/CourseCardSmall.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import defaultThumb from '@/assets/images/default.svg'
 
 export default {
   name: 'MyCoursesView',
@@ -283,7 +284,7 @@ export default {
       enrollments: [],
       loading: true,
       deleteModal: { show: false, courseId: null, courseTitle: '', deleting: false },
-      defaultThumbnail: 'https://placehold.co/400x225/e8e8e8/999?text=Course',
+      defaultThumbnail: defaultThumb,
       categories: ['web-dev', 'data-science', 'mobile-dev', 'design', 'devops', 'other'],
       instructorSearch: '',
       instructorCategoryFilter: '',

@@ -184,7 +184,7 @@
 
         <div
           v-for="(lesson, index) in form.lessons"
-          :key="lesson.id"
+          :key="lesson.id || lesson._key"
           class="lesson-item"
         >
           <div class="lesson-item-header">
@@ -312,7 +312,7 @@ export default {
       if (!isNaN(raw)) this.form.price = raw
     },
     addLesson() {
-      this.form.lessons.push({ id: Date.now(), title: '', video_url: '', description: '' })
+      this.form.lessons.push({ id: null, _key: Date.now(), title: '', video_url: '', description: '' })
     },
     removeLesson(index) {
       this.form.lessons.splice(index, 1)

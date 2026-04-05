@@ -28,7 +28,7 @@
     </div>
 
     <TransitionGroup name="comment-anim" tag="div">
-    <div v-for="comment in comments" :key="comment.id" :id="`comment-${comment.id}`" class="comment-item" :class="{ 'comment-highlight': comment.id === scrollToComment, 'new-realtime': isNewComment(comment.id) }" @animationend="clearNewFlag(comment.id)"  >
+    <div v-for="comment in comments" :key="comment.id" :id="`comment-${comment.id}`" class="comment-item" :class="{ 'comment-highlight': comment.id === scrollToComment, 'new-realtime': isNewComment(comment.id) } " @animationend="clearNewFlag(comment.id)"  >
       <div class="comment-top">
         <div class="comment-avatar">{{ (comment.username || '?').slice(0, 2).toUpperCase() }}</div>
         <div class="comment-body">
@@ -132,10 +132,12 @@ export default {
   setup(props) {
     const lessonIdRef = toRef(props, 'lessonId')
     const fetchRef = ref(null)
+
     const { realtimeEnabled, isNewComment, clearNewFlag } = useRealtimeComments(
       lessonIdRef,
       () => { if (fetchRef.value) fetchRef.value() }
     )
+
     return { realtimeEnabled, isNewComment, clearNewFlag, fetchRef }
   },
   data() {
@@ -149,6 +151,7 @@ export default {
       editContent: '',
       submitting: false,
       submittingReplyTo: null,
+      busy: false,
       commentNotFound: false,
       expandedThreads: {},
       loading: false,
@@ -194,7 +197,7 @@ export default {
     },
     async postComment(parentId = null) {
       const content = parentId ? this.replyContent : this.newComment
-      if (!content.trim() || this.submitting) return
+      if (!content.trim() || this.submitting || this.busy) return
       this.submitting = true
       this.submittingReplyTo = parentId
       try {
@@ -242,8 +245,8 @@ export default {
       this.editContent = comment.content
     },
     async updateComment(id) {
-      if (this.submitting) return
-      this.submitting = true
+      if (this.busy) return
+      this.busy = true
       try {
         await api.put(`/comments/${id}`, { content: this.editContent })
         this.editingId = null
@@ -251,19 +254,19 @@ export default {
       } catch {
         // ignore
       } finally {
-        this.submitting = false
+        this.busy = false
       }
     },
     async deleteComment(id) {
-      if (this.submitting) return
-      this.submitting = true
+      if (this.busy) return
+      this.busy = true
       try {
         await api.delete(`/comments/${id}`)
         await this.fetchComments()
       } catch {
         // ignore
       } finally {
-        this.submitting = false
+        this.busy = false
       }
     },
     loadMore() {

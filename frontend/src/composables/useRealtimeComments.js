@@ -28,7 +28,6 @@ export function useRealtimeComments(lessonId, fetchCommentsFn) {
         event: 'DELETE',
         schema: 'public',
         table: 'comments',
-        filter: `lesson_id=eq.${id}`,
       }, () => {
         fetchCommentsFn()
       })

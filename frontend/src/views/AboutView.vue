@@ -91,6 +91,12 @@
 </template>
 
 <script>
+
+import web from '@/assets/images/web.jpg'
+import data from '@/assets/images/data.jpg'
+import design from '@/assets/images/design.jpg'
+import devops from '@/assets/images/devops.jpg'
+
 export default {
   name: 'AboutView',
   data() {
@@ -99,10 +105,10 @@ export default {
       lastName: '',
       selectedTrack: 'web',
       trackImages: {
-        web: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&h=400&fit=crop',
-        data: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop',
-        design: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=400&fit=crop',
-        devops: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&h=400&fit=crop',
+        web: web,
+        data: data,
+        design: design,
+        devops: devops
       },
       values: [
         { key: 'mission', stat: '10K+' },
